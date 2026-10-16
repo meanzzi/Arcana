@@ -29,6 +29,8 @@ function StartScreen() {
         */}
         <div className="start-screen__deck-wrap">
           <span className="start-screen__aura" aria-hidden="true" />
+          {/* 금색 원 두 겹. 별자리 의미 없이 순수 장식용 */}
+          <span className="start-screen__rings" aria-hidden="true" />
           <div className="start-screen__deck">
             {/* 카드 더미는 뒷면만 여러 장 겹쳐서 보여줌. 각도·위치 차이는 CSS nth-child로 고정 배치 */}
             {Array.from({ length: DECK_SIZE }).map((_, index) => (
