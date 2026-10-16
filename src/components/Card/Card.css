@@ -1,0 +1,33 @@
+.card {
+  aspect-ratio: 2 / 3;
+  width: 140px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card--back {
+  background-color: #4a4a52;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.05) 0px,
+    rgba(255, 255, 255, 0.05) 2px,
+    transparent 2px,
+    transparent 10px
+  );
+}
+
+.card--face {
+  background-color: #5c5c66;
+  padding: 8px;
+}
+
+.card__name {
+  font-family: var(--font-kr);
+  font-size: 0.85rem;
+  color: var(--color-parchment);
+  text-align: center;
+}

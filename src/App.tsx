@@ -1,5 +1,7 @@
+import StartScreen from "./components/StartScreen/StartScreen";
+
 function App() {
-  return <div className="app">Arcana of the Day</div>;
+  return <StartScreen />;
 }
 
 export default App;

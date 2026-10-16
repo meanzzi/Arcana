@@ -1,0 +1,163 @@
+/*
+  반응형 전략: 모바일 세로 레이아웃을 기본으로 만들고,
+  max-width로 가운데 세로 영역만 고정 너비로 유지한다.
+  화면이 넓어지면(데스크톱) 이 영역은 더 커지지 않고 margin: auto로
+  가운데 정렬되며, 양옆은 body 배경(남색 그라데이션)만 그대로 보인다.
+  별도의 미디어 쿼리 없이 이 구조만으로 모바일/데스크톱 모두 대응된다.
+*/
+.start-screen {
+  position: relative;
+  max-width: 480px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 32px 24px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.start-screen__header {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.start-screen__ribbon {
+  display: inline-block;
+  padding: 10px 28px;
+  border-top: 1px solid var(--color-gold);
+  border-bottom: 1px solid var(--color-gold);
+}
+
+.start-screen__title {
+  font-family: var(--font-en);
+  font-size: 1.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--color-gold);
+  white-space: nowrap;
+}
+
+.start-screen__subtitle {
+  margin-top: 14px;
+  font-family: var(--font-kr);
+  font-size: 1rem;
+  color: var(--color-parchment);
+}
+
+.start-screen__deck-area {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 카드 더미 + 오라를 감싸는 호버 영역. 카드 더미 주변 정도의 크기로만 한정 */
+.start-screen__deck-wrap {
+  position: relative;
+  width: 200px;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 더미 뒤의 은은한 금빛 오라. 기본은 흐리게, 호버 시 또렷해짐 */
+.start-screen__aura {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201, 162, 74, 0.35) 0%, rgba(201, 162, 74, 0.12) 45%, transparent 70%);
+  filter: blur(16px);
+  opacity: 0.6;
+  transform: translate(-50%, -50%) scale(1);
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
+}
+
+.start-screen__deck {
+  position: relative;
+  width: 140px;
+  height: 210px;
+  transition: transform 0.4s ease;
+}
+
+/* 호버: 더미가 살짝 떠오르고 오라가 강해짐. .card 자체는 건드리지 않음(GSAP과 충돌 방지) */
+.start-screen__deck-wrap:hover .start-screen__deck {
+  transform: translateY(-8px);
+}
+
+.start-screen__deck-wrap:hover .start-screen__aura {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.start-screen__deck-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.start-screen__deck-card:nth-child(1) {
+  transform: rotate(-4deg) translate(-6px, 2px);
+}
+
+.start-screen__deck-card:nth-child(2) {
+  transform: rotate(-2deg) translate(-3px, 1px);
+}
+
+.start-screen__deck-card:nth-child(3) {
+  transform: rotate(0deg);
+}
+
+.start-screen__deck-card:nth-child(4) {
+  transform: rotate(2deg) translate(3px, -1px);
+}
+
+.start-screen__deck-card:nth-child(5) {
+  transform: rotate(4deg) translate(6px, -2px);
+}
+
+.start-screen__draw-button {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 16px;
+  padding: 14px 48px;
+  background: transparent;
+  border: 1px solid var(--color-gold);
+  border-radius: 999px;
+  color: var(--color-gold);
+  font-family: var(--font-kr);
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  /* iOS Safari에서 :active가 바로 반응하도록 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 호버·터치 시 차오르는 금빛 배경. 버튼 자체가 아니라 가상 요소로 분리해 글자와 겹치지 않게 함 */
+.start-screen__draw-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(201, 162, 74, 0.35) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.start-screen__draw-button:hover::before,
+.start-screen__draw-button:active::before {
+  opacity: 1;
+}
+
+.start-screen__draw-button-label {
+  position: relative;
+  z-index: 1;
+}
