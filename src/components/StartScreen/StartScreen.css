@@ -65,21 +65,62 @@
   justify-content: center;
 }
 
-/* 더미 뒤의 금빛 오라. 기본부터 밝고 넓게, 호버 시 한층 더 강해짐 */
+/*
+  오라 ① 넓은 후광: 화면 가운데를 은은하게 밝히는 바깥 빛.
+  카드에 붙은 진한 빛은 ②(aura-core)가 맡으므로, 여기서는 중심도 너무 진하지 않게 두고 넓게 퍼뜨림.
+  호버 시 opacity·transform만 바꿈(GPU 합성 속성이라 버벅임 없음)
+*/
 .start-screen__aura {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 440px;
-  height: 440px;
+  width: 480px;
+  height: 480px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(201, 162, 74, 0.5) 0%, rgba(201, 162, 74, 0.22) 45%, transparent 72%);
-  filter: blur(20px);
+  background: radial-gradient(circle, rgba(201, 162, 74, 0.32) 0%, rgba(201, 162, 74, 0.14) 40%, transparent 70%);
+  filter: blur(24px);
   opacity: 0.8;
   transform: translate(-50%, -50%) scale(1);
   transition:
     opacity 0.4s ease,
     transform 0.4s ease;
+  /*
+    [애니메이션 단계] 카드 더미의 '숨쉬기(위아래 둥실)'와 박자를 맞춰
+    scale 1 ↔ 1.04, opacity 0.75 ↔ 0.85 정도로 아주 느리게 함께 호흡시킬 예정 (GSAP).
+    단, 호버 transition과 충돌하지 않도록 그때는 이 요소를 한 겹 더 감싸서
+    호흡은 바깥 요소, 호버는 안쪽 요소에 거는 식으로 분리할 것
+  */
+}
+
+/*
+  오라 ② 안쪽 코어: 카드 더미 바로 뒤에 몰린 진한 빛.
+  카드가 세로로 긴 2:3 비율이라 원이 아니라 세로 타원으로 만들어, 카드 실루엣을 감싸듯 빛나게 함.
+  크기는 더미(140×210)에 좌우로 기운 카드 여유분을 더한 정도
+*/
+.start-screen__aura-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 230px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    rgba(230, 213, 168, 0.55) 0%,
+    rgba(201, 162, 74, 0.4) 35%,
+    transparent 70%
+  );
+  filter: blur(14px);
+  opacity: 0.85;
+  transform: translate(-50%, -50%) scale(1);
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
+  /*
+    [애니메이션 단계] 더미가 위로 떠오를 때(숨쉬기 정점) 코어가 살짝 밝아지도록
+    opacity를 더미 움직임과 같은 타임라인에 묶을 예정.
+    카드 뽑기 버튼을 누르는 순간 코어가 한 번 확 밝아졌다가 사라지는 전환 연출도 여기서 시작
+  */
 }
 
 /* 오라 안쪽, 카드 뒤에 겹쳐지는 얇은 금색 원 두 겹 */
@@ -102,11 +143,25 @@
   border: 1px solid rgba(201, 162, 74, 0.3);
 }
 
+/*
+  오라 ③ 카드 테두리 발광: drop-shadow를 카드 각각이 아니라 더미 전체에 건다.
+  카드마다 box-shadow를 주면 5장이 겹치는 곳만 빛이 진해져 얼룩이 생기지만,
+  drop-shadow는 겹쳐진 카드들의 '합쳐진 실루엣'을 따라 한 번만 빛나게 해줌.
+  좁고 진한 빛(4px) + 넓고 옅은 빛(14px) 두 겹으로 테두리에 빛이 딱 붙어 있는 느낌을 냄.
+  .card가 아니라 감싸개에 거는 이유: 나중에 GSAP이 .card의 transform을 직접 다루기 때문
+*/
 .start-screen__deck {
   position: relative;
   width: 140px;
   height: 210px;
+  filter: drop-shadow(0 0 4px rgba(230, 213, 168, 0.55)) drop-shadow(0 0 14px rgba(201, 162, 74, 0.45));
   transition: transform 0.4s ease;
+  /*
+    [애니메이션 단계] 대기 상태 숨쉬기(위아래 둥실)는 GSAP으로 이 요소가 아닌 .card 쪽이나
+    별도 래퍼에 걸 것 — 이 요소의 transform은 호버(translateY)가 이미 사용 중.
+    filter는 transition하면 매 프레임 다시 그려야 해서 무거우므로, 발광 세기 변화는
+    filter 대신 ①②의 opacity로 표현하는 원칙을 유지
+  */
 }
 
 /* 호버: 더미가 살짝 떠오르고 오라가 강해짐. .card 자체는 건드리지 않음(GSAP과 충돌 방지) */
@@ -114,9 +169,15 @@
   transform: translateY(-8px);
 }
 
+/* 호버 시 바깥 후광은 더 넓게, 코어는 더 진하게 → 빛이 '세지는' 느낌. 둘 다 opacity·transform만 사용 */
 .start-screen__deck-wrap:hover .start-screen__aura {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1.1);
+}
+
+.start-screen__deck-wrap:hover .start-screen__aura-core {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.06);
 }
 
 .start-screen__deck-card {
