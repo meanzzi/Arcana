@@ -9,7 +9,13 @@
   justify-content: center;
 }
 
+/*
+  뒷면: 금색 테두리를 더 두껍고 밝게(샴페인 골드 2px).
+  더미로 겹쳤을 때 뒤에 깔린 카드들의 가장자리도 이 테두리 덕분에 금색으로 보임.
+  바탕은 뒷면 디자인이 나오기 전까지 쓰는 회색 임시 패턴
+*/
 .card--back {
+  border: 2px solid var(--color-champagne);
   background-color: #4a4a52;
   background-image: repeating-linear-gradient(
     45deg,

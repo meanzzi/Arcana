@@ -18,7 +18,7 @@ function StartScreen() {
       <GoldDustRibbon />
 
       <header className="start-screen__header">
-        {/* 리본 배너도 이미지가 아직 없어서 위아래 금색 선으로만 표시 */}
+        {/* 리본 배너 자리. 장식 없이 제목만 두고, 나중에 리본 이미지가 생기면 이 요소에 배경으로 넣음 */}
         <div className="start-screen__ribbon">
           <h1 className="start-screen__title">Arcana of the Day</h1>
         </div>
@@ -27,9 +27,8 @@ function StartScreen() {
 
       <div className="start-screen__deck-area">
         {/*
-          deck-wrap: 호버 감지 + 오라 영역을 담당하는 바깥 요소.
-          나중에 GSAP이 .card에 직접 transform을 걸 예정이라,
-          호버로 인한 이동(translateY)은 .card가 아니라 이 바깥 wrap에 적용해 충돌을 피함
+          deck-wrap: 오라·동심원·카드 더미를 한데 묶는 바깥 요소.
+          카드 더미에는 호버 효과가 없음(누를 수 있는 건 '카드 뽑기' 버튼 하나로 구분)
         */}
         <div className="start-screen__deck-wrap">
           {/*
@@ -50,9 +49,9 @@ function StartScreen() {
         </div>
       </div>
 
+      {/* 테두리 회전 빛(::before)과 안쪽 면(::after)은 음수 z-index라 글자는 별도 감쌈 없이 항상 위에 보임 */}
       <button className="start-screen__draw-button" type="button">
-        {/* 호버/터치 시 차오르는 금빛 배경(::before)보다 글자가 항상 위에 오도록 분리 */}
-        <span className="start-screen__draw-button-label">카드 뽑기</span>
+        카드 뽑기
       </button>
     </div>
   );

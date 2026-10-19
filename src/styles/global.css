@@ -8,57 +8,22 @@ body {
   background: linear-gradient(160deg, var(--color-bg-deep) 0%, var(--color-bg-light) 100%);
   color: var(--color-parchment);
   font-family: var(--font-kr);
+  /* 모바일에서 100vh는 주소창만큼 실제 화면보다 커서 스크롤이 생기므로, 지원 브라우저는 dvh(실제 보이는 높이) 사용 */
   min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
 }
 
 /*
-  별가루: 화면 전체에 떠서 우상단→좌하단으로 아주 천천히 흐르는 금빛 점들.
-  body 레벨에 둬서 나중에 생길 다른 화면(뽑기+결과 화면)과도 배경이 끊기지 않고 이어지게 함.
-  타일 하나(620px)에 점 18개를 불규칙한 위치·크기·밝기로 흩어 놓아 격자로 보이지 않게 함.
+  배경 잔별은 캔버스(components/StarField)로 그림.
+  예전 CSS 별가루(body::before)는 점이 크고 금색 한 가지라 시안의 '고운 잔별' 느낌이 안 나서 대체함
 */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.7;
-  background-image: radial-gradient(1.4px 1.4px at 6% 14%, rgba(201, 162, 74, 0.55), transparent 70%),
-    radial-gradient(1.8px 1.8px at 19% 63%, rgba(201, 162, 74, 0.8), transparent 70%),
-    radial-gradient(1.1px 1.1px at 27% 8%, rgba(201, 162, 74, 0.5), transparent 70%),
-    radial-gradient(2px 2px at 34% 81%, rgba(201, 162, 74, 0.9), transparent 70%),
-    radial-gradient(1.3px 1.3px at 41% 35%, rgba(201, 162, 74, 0.45), transparent 70%),
-    radial-gradient(1.6px 1.6px at 48% 92%, rgba(201, 162, 74, 0.65), transparent 70%),
-    radial-gradient(2.2px 2.2px at 56% 22%, rgba(201, 162, 74, 1), transparent 70%),
-    radial-gradient(1.2px 1.2px at 63% 58%, rgba(201, 162, 74, 0.5), transparent 70%),
-    radial-gradient(1.7px 1.7px at 71% 11%, rgba(201, 162, 74, 0.7), transparent 70%),
-    radial-gradient(1.4px 1.4px at 78% 74%, rgba(201, 162, 74, 0.55), transparent 70%),
-    radial-gradient(1.9px 1.9px at 84% 29%, rgba(201, 162, 74, 0.85), transparent 70%),
-    radial-gradient(1.1px 1.1px at 91% 66%, rgba(201, 162, 74, 0.4), transparent 70%),
-    radial-gradient(1.5px 1.5px at 9% 88%, rgba(201, 162, 74, 0.6), transparent 70%),
-    radial-gradient(1px 1px at 59% 44%, rgba(201, 162, 74, 0.4), transparent 70%),
-    radial-gradient(1.3px 1.3px at 88% 4%, rgba(201, 162, 74, 0.5), transparent 70%),
-    radial-gradient(1.8px 1.8px at 2% 52%, rgba(201, 162, 74, 0.75), transparent 70%),
-    radial-gradient(1.2px 1.2px at 44% 6%, rgba(201, 162, 74, 0.5), transparent 70%),
-    radial-gradient(1.6px 1.6px at 96% 93%, rgba(201, 162, 74, 0.6), transparent 70%);
-  background-repeat: repeat;
-  background-size: 620px 620px;
-  animation: stardust-drift 70s linear infinite;
-}
 
-@keyframes stardust-drift {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    /* 왼쪽·아래로 이동 = 점들이 우상단에서 좌하단으로 흘러가는 것처럼 보임 */
-    background-position: -620px 620px;
-  }
-}
-
-/* 십자로 반짝이는 큰 별 4개. body::before(작은 점들)보다 위, #root(실제 화면)보다 아래 */
+/*
+  작은 흰색 4각 반짝임 4개. 시안처럼 '천천히 은은하게 깜빡이는 정도'가 되도록 작게.
+  #root(실제 화면)보다 아래에 깔림
+*/
 .stardust-flares {
   position: fixed;
   inset: 0;
@@ -66,15 +31,17 @@ body::before {
   pointer-events: none;
 }
 
+/* 크기는 예전(가운데 4px, 빛줄기 26px)의 절반 이하 */
 .stardust-flares__star {
   position: absolute;
-  width: 4px;
-  height: 4px;
-  background: var(--color-gold);
-  border-radius: 1px;
+  width: 2px;
+  height: 2px;
+  background: #fff;
+  border-radius: 0.5px;
   transform: rotate(45deg);
-  box-shadow: 0 0 8px 3px rgba(201, 162, 74, 0.7);
-  animation: star-twinkle 5s ease-in-out infinite;
+  box-shadow: 0 0 4px 1px rgba(255, 255, 255, 0.5);
+  /* 천천히 깜빡이도록 한 주기 8초 */
+  animation: star-twinkle 8s ease-in-out infinite;
 }
 
 .stardust-flares__star::before,
@@ -83,18 +50,18 @@ body::before {
   position: absolute;
   top: 50%;
   left: 50%;
-  background: linear-gradient(to right, transparent, rgba(201, 162, 74, 0.9), transparent);
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.85), transparent);
 }
 
 .stardust-flares__star::before {
-  width: 26px;
+  width: 12px;
   height: 1px;
   transform: translate(-50%, -50%);
 }
 
 .stardust-flares__star::after {
   width: 1px;
-  height: 26px;
+  height: 12px;
   transform: translate(-50%, -50%);
 }
 
@@ -107,34 +74,35 @@ body::before {
 .stardust-flares__star--2 {
   top: 22%;
   left: 78%;
-  animation-delay: 1.2s;
+  animation-delay: 2s;
 }
 
 .stardust-flares__star--3 {
   top: 68%;
   left: 12%;
-  animation-delay: 2.4s;
+  animation-delay: 4s;
 }
 
 .stardust-flares__star--4 {
   top: 78%;
   left: 85%;
-  animation-delay: 3.6s;
+  animation-delay: 6s;
 }
 
 @keyframes star-twinkle {
+  /* 은은하게: 밝기·크기 변화 폭을 예전(0.4~1, 0.85~1.15 배)보다 좁게 */
   0%,
   100% {
-    opacity: 0.4;
-    transform: rotate(45deg) scale(0.85);
+    opacity: 0.25;
+    transform: rotate(45deg) scale(0.9);
   }
   50% {
-    opacity: 1;
-    transform: rotate(45deg) scale(1.15);
+    opacity: 0.7;
+    transform: rotate(45deg) scale(1.1);
   }
 }
 
-/* 가장자리를 어둡게 하는 비네팅. 별가루 레이어들보다 위, 실제 화면 콘텐츠보다는 아래 */
+/* 가장자리를 어둡게 하는 비네팅. 십자 별보다 위, #root(잔별·금가루 캔버스·실제 화면)보다는 아래 */
 body::after {
   content: "";
   position: fixed;

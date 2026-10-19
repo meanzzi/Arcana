@@ -3,12 +3,88 @@
   React 컴포넌트(GoldDustRibbon.tsx)와 분리해 두어, 애니메이션 단계에서
   프레임마다 drawRibbon만 다시 호출하는 식으로 그대로 재사용할 수 있게 함.
 
-  구성 (모두 같은 S자 경로를 기준으로 함)
-  - 바닥 안개 2겹: 넓고 옅은 안개 + 중심을 따라가는 좁고 밝은 빛줄기
-  - 가닥(strand) 여러 개: 각자 다른 박자로 물결치며 꼬였다 갈라졌다 함 → 한 줄이 아닌 '결' 느낌
-  - 입자 4종: 미세 가루 / 중간 입자 / 반짝이 / 띠 바깥에 흩날리는 가루
-  - 일부 입자는 점 대신 진행 방향으로 짧은 빛줄기, 가장 밝은 반짝이 몇 개는 십자 빛
+  구성
+  - 입자만으로 흐름의 형태를 만든다 (뿌연 안개·블러 레이어는 쓰지 않음 → 회색·보라 번짐 방지)
+  - 입자: S자 곡선 위 한 점에서 '수직 방향'으로 가우시안 분포로 흩뿌림
+    → 중심은 거의 붙어 보일 만큼 촘촘하고 바깥으로 갈수록 성기게, 가장자리는 부드럽게 사라짐
+    (평행한 가닥 여러 개로 그리면 빛줄기처럼 보여서 사용하지 않음)
 */
+
+import { between, createRandom, gaussianRandom } from "../../utils/random";
+
+/* ================= 튜닝용 상수 ================= */
+
+/** 입자 1개가 차지하는 화면 면적(px²). 작을수록 촘촘해짐. 입자 수가 화면 크기에 비례하게 하는 기준 */
+const AREA_PER_PARTICLE = 35;
+/** 입자 수 하한·상한 (모바일 ≈ 9,000개, 데스크톱은 상한에 걸림) */
+const MIN_PARTICLES = 8000;
+const MAX_PARTICLES = 15000;
+
+/** 작은 입자 지름 범위(px). 전체의 대부분 */
+const SMALL_SIZE_MIN = 0.3;
+const SMALL_SIZE_MAX = 1.2;
+/** 반짝이는 밝은 입자 비율과 지름 범위(px). 이 입자에만 빛번짐 스프라이트를 씀 */
+const LARGE_RATIO = 0.04;
+const LARGE_SIZE_MIN = 1.5;
+const LARGE_SIZE_MAX = 2.5;
+/** 반짝이는 입자 밝기 범위. 일반 입자보다 확실히 밝게 */
+const LARGE_ALPHA_MIN = 0.85;
+const LARGE_ALPHA_MAX = 1;
+/** 반짝이는 입자 색: 가장 밝은 연금색 */
+const LARGE_COLOR = "#F3DFA2";
+
+/** 일반 입자 밝기 범위 */
+const ALPHA_MIN = 0.5;
+const ALPHA_MAX = 1;
+
+/** 금가루 색: 확실한 금색 3색 중 랜덤 (tokens.css의 --color-champagne* 과 같은 값). 흰색·회색은 쓰지 않음 */
+const DUST_COLORS = ["#E8C77A", "#D4A84B", "#F3DFA2"];
+
+/**
+  흐름의 폭: 가우시안 표준편차(σ)를 기준 영역 폭에 대한 비율로.
+  입자의 약 95%가 중심선 ±2σ 안에 들어감. 모바일(폭 400px)이면 σ ≈ 32px → 띠 폭 약 130px.
+  작을수록 중심에 더 몰려 촘촘해짐
+*/
+const FLOW_SIGMA_RATIO = 0.08;
+/** 이보다 멀리(σ 배수) 떨어진 입자는 다시 뽑음. 화면 끝까지 튀어나가는 입자 방지 */
+const MAX_SIGMA = 3;
+
+/** 반짝이는 입자 빛번짐: 입자 지름의 몇 배 크기로, 얼마나 밝게 */
+const GLOW_SCALE = 5;
+const GLOW_ALPHA = 0.35;
+
+/**
+  중심선을 따라 깔리는 옅은 금빛 광채.
+  - BAND_ALPHA: 광채가 가장 진한 곳(중심선)의 최종 불투명도. 0.06~0.1 권장, 0이면 광채 없음
+  - BAND_RADIUS: 광채 반경(σ 배수). 클수록 넓게 번짐
+  색은 금빛(232, 199, 122) 한 가지만 사용 (회색·보라 번짐 방지)
+*/
+const BAND_ALPHA = 0.08;
+const BAND_RADIUS = 2.8;
+const BAND_COLOR = "232, 199, 122";
+
+/**
+  흐름 경로를 지나는 점들(순서대로). 기준 영역 대비 비율(0~1) 좌표.
+  이 점들을 모두 지나는 부드러운 곡선(Catmull-Rom → 3차 베지어)으로 이어 그린다.
+  오른쪽 위 화면 밖 → 오른쪽으로 크게 불룩 → 카드 아래쪽 뒤를 지나 왼쪽으로 건너감
+  → 왼쪽 아래에서 다시 휘어 화면 밖으로 나가는 물결 모양.
+  첫 점과 마지막 점은 화면 밖에 둬서 띠가 화면 안에서 뚝 끊겨 보이지 않게 함
+*/
+const FLOW_PATH: ReadonlyArray<{ x: number; y: number }> = [
+  { x: 0.55, y: -0.05 },
+  { x: 0.8, y: 0.2 },
+  { x: 0.88, y: 0.42 },
+  { x: 0.7, y: 0.6 },
+  { x: 0.4, y: 0.66 },
+  { x: 0.15, y: 0.72 },
+  { x: 0.12, y: 0.88 },
+  { x: 0.35, y: 1.05 },
+];
+
+/** true면 경로 중심선(하늘색 선)과 FLOW_PATH 점(빨간 점)을 겹쳐 그림. 경로 조정할 때만 켜기 */
+const DEBUG_PATH = false;
+
+/* =============================================== */
 
 type Point = { x: number; y: number };
 
@@ -16,61 +92,23 @@ type Point = { x: number; y: number };
 type Segment = [Point, Point, Point, Point];
 
 /**
-  가닥 하나. 띠 안에서 중심선과 나란히 흐르되, 옆으로 물결치는 위치와 진하기가 t에 따라 변함.
-  가닥마다 박자(frequency, phase)가 달라서 서로 교차하고 모였다 흩어짐
-*/
-type Strand = {
-  /** 가닥의 기본 위치(띠 반폭 기준, -1~1) */
-  base: number;
-  /** 옆으로 물결치는 폭 */
-  amplitude: number;
-  /** 띠 전체 길이 동안 물결치는 횟수 */
-  frequency: number;
-  phase: number;
-  /** 가닥 굵기(입자가 가닥 중심에서 퍼지는 정도) */
-  spread: number;
-  /** 가닥이 진해졌다 옅어지는 횟수. 가닥이 끊겼다 이어지는 듯한 느낌을 줌 */
-  fadeFrequency: number;
-  fadePhase: number;
-};
-
-/**
-  - fine: 미세 가루. 대부분을 차지하며 질감을 채움
-  - mid: 중간 입자. 반짝임의 몸통
-  - sparkle: 크고 밝은 반짝이(빛번짐 있음)
-  - halo: 띠 바깥 멀리까지 흩날리는 아주 옅은 가루. 띠 경계가 공기 중으로 번지게 함
-*/
-type ParticleKind = "fine" | "mid" | "sparkle" | "halo";
-
-/**
-  입자 하나. 화면 좌표(x, y)가 아니라 '경로 위 위치(t) + 가닥 + 가닥 안에서의 위치'로 저장한다.
+  입자 하나. 화면 좌표(x, y)가 아니라 '경로 위 위치(t) + 수직 방향 거리(z)'로 저장한다.
   - 화면 크기가 바뀌어도 같은 데이터로 다시 그리기만 하면 됨
-  - [애니메이션 단계] t만 조금씩 늘리면 입자가 가닥을 따라 S자로 흘러감
-    (가닥 위치는 t로부터 매번 계산하므로, 흐르면서 가닥의 물결도 자연스럽게 따라감)
+  - [애니메이션 단계] t를 아주 조금씩 늘리면 곡선을 따라 흐르고,
+    z에 sin(시간 + 입자별 위상) × 작은 값을 더하면 살짝 일렁임
 */
 type DustParticle = {
   /** 0~1. S자 경로 위의 위치 (0 = 우상단 시작, 1 = 좌하단 끝) */
   t: number;
-  /** 속한 가닥 번호. halo 입자는 가닥 없이 띠 전체 기준으로 흩어지므로 -1 */
-  strand: number;
-  /** 가닥 중심에서 옆으로 벗어난 정도(띠 반폭 기준). halo는 띠 중심선 기준 */
-  localOffset: number;
-  kind: ParticleKind;
+  /** 중심선에서 수직으로 떨어진 거리(σ 단위, 가우시안). 0이 중심, ±1σ 안에 약 68% */
+  z: number;
   /** 입자 지름(px) */
   size: number;
-  /** 입자 고유 밝기(0~1). 실제 그릴 때 끝부분 페이드·가닥 진하기 등이 곱해짐 */
+  /** 입자 고유 밝기. 실제 그릴 때 끝부분 페이드·가장자리 감쇠가 곱해짐 */
   alpha: number;
   color: string;
-  /** 0이면 점, 0보다 크면 진행 방향으로 그 길이(px)만큼 짧은 빛줄기로 그림 */
-  streakLength: number;
-  /** 십자 빛을 다는 가장 밝은 반짝이 여부 */
-  flare: boolean;
-};
-
-/** 띠 하나를 그리는 데 필요한 데이터 묶음. 한 번 만들어 두고 계속 재사용 */
-export type RibbonData = {
-  strands: Strand[];
-  particles: DustParticle[];
+  /** 큰 입자(빛번짐 있음) 여부 */
+  large: boolean;
 };
 
 /** 실제 px로 바꿀 때 기준이 되는 영역. S자 모양이 데스크톱에서 옆으로 늘어나지 않게 폭을 제한 */
@@ -81,95 +119,79 @@ export type RibbonLayout = {
   boxWidth: number;
   /** 기준 영역 높이(px) = 화면 높이 */
   height: number;
+  /**
+    각 베지어 곡선이 끝나는 지점의 누적 길이 비율(0~1). 마지막 값은 1.
+    곡선마다 실제 길이가 달라서, t를 곡선 개수로 똑같이 나누면 짧은 곡선에 입자가 몰려 밀도가 고르지 않게 됨.
+    그래서 t를 '전체 길이 중 어디쯤인지'로 보고 이 표로 해당 곡선을 찾음
+  */
+  segmentEnds: number[];
 };
 
-/** 그리기용 스프라이트 묶음. 미리 한 번 그려 두고 drawImage로 찍어냄 */
-export type RibbonSprites = {
-  glow: HTMLCanvasElement;
-  flare: HTMLCanvasElement;
-};
-
-// 디자인 시스템 색: 금박 / 양피지
-const GOLD = "rgb(201, 162, 74)";
-const PARCHMENT = "rgb(230, 213, 168)";
-
 /*
-  입자 중 양피지색(밝고 옅은 색)의 비율. 높일수록 금가루 전체 색이 옅어짐.
-  디자인 시스템의 '세 색 + 투명도 변형만' 규칙을 지키기 위해 새 색을 만들지 않고 비율로 조절
+  FLOW_PATH의 점들을 Catmull-Rom 방식으로 이어 3차 베지어 곡선 목록으로 바꾼다.
+  점 Pi → Pi+1 구간의 조절점은 앞뒤 점의 방향으로 정해짐:
+    조절점1 = Pi   + (Pi+1 − Pi−1) / 6
+    조절점2 = Pi+1 − (Pi+2 − Pi)   / 6
+  이렇게 하면 모든 점을 정확히 지나면서 이음점에서 꺾이지 않고 부드럽게 휘어짐 (직선 구간 없음).
+  양 끝은 이웃 점이 없으므로 끝 점을 한 번 더 쓴 것으로 계산
 */
-const PARCHMENT_RATIO = 0.5;
-/** 반짝이는 더 밝게 빛나 보이도록 양피지색 비율을 따로 높게 */
-const SPARKLE_PARCHMENT_RATIO = 0.75;
+function buildPath(points: ReadonlyArray<Point>): Segment[] {
+  const segments: Segment[] = [];
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const p0 = points[Math.max(0, i - 1)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(points.length - 1, i + 2)];
+    segments.push([
+      p1,
+      { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 },
+      { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 },
+      p2,
+    ]);
+  }
+  return segments;
+}
 
-/*
-  S자 경로. 좌표는 px가 아니라 기준 영역 대비 비율(0~1)이라 화면 크기에 맞춰 자동으로 늘고 줄어든다.
-  우상단 바깥에서 시작 → 오른쪽 가장자리로 부풀며 내려옴 → 카드 아래쪽 뒤를 지나
-  → 왼쪽으로 부풀었다가 → 아래 바깥으로 빠져나감.
-  두 곡선이 만나는 점(0.55, 0.56)에서 양쪽 조절점이 일직선이 되게 맞춰 꺾임 없이 부드럽게 이어짐.
-  시작·끝을 화면 밖(-0.03, 1.05)에 둬서 띠가 화면 안에서 뚝 끊겨 보이지 않게 함
+const PATH: Segment[] = buildPath(FLOW_PATH);
+
+/**
+  기준 영역 폭 = 화면 높이의 70%까지만.
+  모바일 세로 화면에서는 기준 영역 = 화면 전체라 FLOW_PATH 좌표가 곧 화면 비율이고,
+  데스크톱 가로 화면에서는 S자가 옆으로 납작하게 늘어나지 않도록 가운데 영역 기준으로 그림
 */
-const PATH: Segment[] = [
-  [
-    { x: 0.6, y: -0.03 },
-    { x: 1.0, y: 0.18 },
-    { x: 0.98, y: 0.45 },
-    { x: 0.55, y: 0.56 },
-  ],
-  [
-    { x: 0.55, y: 0.56 },
-    { x: 0.12, y: 0.67 },
-    { x: -0.08, y: 0.82 },
-    { x: 0.3, y: 1.05 },
-  ],
-];
-
-/** 미리 만들어 둘 최대 입자 수. 화면이 작으면 이 중 앞쪽 일부만 그림 */
-const MAX_PARTICLES = 22000;
-const MIN_PARTICLES = 8000;
-
-/** 가닥 개수 */
-const STRAND_COUNT = 6;
-
-/** 기준 영역 폭 = 화면 높이의 70%까지만. 데스크톱 가로 화면에서 S자가 납작하게 퍼지는 것을 막음 */
 const BOX_ASPECT = 0.7;
 
-/** 띠의 최대 반폭 = 기준 영역 폭의 17% */
-const BAND_HALF_WIDTH_RATIO = 0.17;
-
-/** 바닥 안개를 찍을 횟수. 촘촘할수록 안개가 매끈하게 이어짐 */
-const HAZE_STEPS = 120;
-
-/*
-  시드가 있는 랜덤(mulberry32).
-  Math.random()은 새로고침마다 띠 모양이 달라지므로, 같은 시드면 항상 같은 결과가 나오는 랜덤을 씀
-*/
-function createRandom(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let r = Math.imul(state ^ (state >>> 15), 1 | state);
-    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
-    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/** 랜덤 4개의 평균 → 0 근처에 몰리는 종 모양 분포(-1~1). 중심은 빽빽하고 가장자리는 드문드문 */
-function bellRandom(random: () => number): number {
-  return ((random() + random() + random() + random()) / 4 - 0.5) * 2;
-}
-
-function between(random: () => number, min: number, max: number): number {
-  return min + random() * (max - min);
+/** 곡선 하나의 길이(px)를 잘게 나눈 직선 길이의 합으로 근사 */
+function segmentLength(segment: Segment, boxWidth: number, height: number): number {
+  const steps = 24;
+  let length = 0;
+  let prev = bezierPoint(segment, 0);
+  for (let i = 1; i <= steps; i += 1) {
+    const next = bezierPoint(segment, i / steps);
+    length += Math.hypot((next.x - prev.x) * boxWidth, (next.y - prev.y) * height);
+    prev = next;
+  }
+  return length;
 }
 
 export function getLayout(width: number, height: number): RibbonLayout {
   const boxWidth = Math.min(width, height * BOX_ASPECT);
-  return { originX: (width - boxWidth) / 2, boxWidth, height };
+
+  // 화면 비율에 따라 곡선별 실제 길이가 달라지므로 레이아웃이 바뀔 때마다 다시 계산
+  const lengths = PATH.map((segment) => segmentLength(segment, boxWidth, height));
+  const total = lengths.reduce((sum, value) => sum + value, 0);
+  let accumulated = 0;
+  const segmentEnds = lengths.map((value) => {
+    accumulated += value;
+    return accumulated / total;
+  });
+
+  return { originX: (width - boxWidth) / 2, boxWidth, height, segmentEnds };
 }
 
 /** 화면 면적에 비례한 입자 수. 모바일은 적게, 데스크톱은 많게 */
 export function getParticleCount(layout: RibbonLayout): number {
-  const count = Math.round((layout.boxWidth * layout.height) / 20);
+  const count = Math.round((layout.boxWidth * layout.height) / AREA_PER_PARTICLE);
   return Math.min(MAX_PARTICLES, Math.max(MIN_PARTICLES, count));
 }
 
@@ -190,43 +212,41 @@ function bezierTangent([a, b, c, d]: Segment, u: number): Point {
   };
 }
 
-/**
-  경로 위치 t(0~1)의 실제 px 좌표와 단위 벡터 두 개.
-  - tangent: 진행 방향 (빛줄기를 이 방향으로 그림)
-  - normal: 띠 바깥쪽 방향 (가닥·입자를 이 방향으로 벌림)
-*/
-function samplePath(t: number, layout: RibbonLayout): { point: Point; tangent: Point; normal: Point } {
-  // t 0~0.5는 첫 번째 곡선, 0.5~1은 두 번째 곡선
-  const scaled = Math.min(t, 0.9999) * PATH.length;
-  const segment = PATH[Math.floor(scaled)];
-  const u = scaled - Math.floor(scaled);
+/** 경로 위치 t(0~1)의 실제 px 좌표와, 그 지점에서 띠 바깥쪽을 향하는 단위 벡터(법선) */
+function samplePath(t: number, layout: RibbonLayout): { point: Point; normal: Point } {
+  // t(전체 길이 중 위치)가 속한 곡선을 찾고, 그 곡선 안에서의 위치 u(0~1)로 바꿈
+  let index = 0;
+  while (index < PATH.length - 1 && t > layout.segmentEnds[index]) {
+    index += 1;
+  }
+  const start = index === 0 ? 0 : layout.segmentEnds[index - 1];
+  const end = layout.segmentEnds[index];
+  const u = Math.min(1, Math.max(0, (t - start) / (end - start || 1)));
+  const segment = PATH[index];
 
   const p = bezierPoint(segment, u);
-  const rawTangent = bezierTangent(segment, u);
+  const tangent = bezierTangent(segment, u);
 
-  // 비율 좌표 → px. 가로·세로 배율이 달라서 접선도 px 기준으로 바꾼 뒤 정규화해야 정확함
-  const tx = rawTangent.x * layout.boxWidth;
-  const ty = rawTangent.y * layout.height;
+  // 비율 좌표 → px. 가로·세로 배율이 달라서 접선도 px 기준으로 바꾼 뒤 법선을 구해야 정확함
+  const tx = tangent.x * layout.boxWidth;
+  const ty = tangent.y * layout.height;
   const length = Math.hypot(tx, ty) || 1;
 
   return {
     point: { x: layout.originX + p.x * layout.boxWidth, y: p.y * layout.height },
-    tangent: { x: tx / length, y: ty / length },
     normal: { x: -ty / length, y: tx / length },
   };
 }
 
 /**
-  t 위치에서의 띠 반폭(px).
-  - taper: sin(πt)로 양 끝은 가늘고 가운데는 넓게 → 붓으로 그은 듯한 모양
-  - ripple: 잔물결을 섞어 폭이 기계적으로 매끈하지 않게
-  - twist: S자가 방향을 바꾸는 지점(t=0.5)에서 폭을 잠깐 좁혀 리본이 한 번 뒤집히는 것처럼 보이게
+  t 위치에서의 σ(px).
+  - taper: 양 끝은 좁고 가운데는 넓게 → 붓으로 그은 듯한 모양
+  - ripple: 폭이 기계적으로 매끈하지 않게 잔물결
 */
-function bandHalfWidth(t: number, layout: RibbonLayout): number {
-  const taper = 0.35 + 0.65 * Math.sin(Math.PI * t);
-  const ripple = 1 + 0.15 * Math.sin(t * Math.PI * 5);
-  const twist = 1 - 0.55 * Math.exp(-(((t - 0.5) / 0.07) ** 2));
-  return layout.boxWidth * BAND_HALF_WIDTH_RATIO * taper * ripple * twist;
+function flowSigma(t: number, layout: RibbonLayout): number {
+  const taper = 0.45 + 0.55 * Math.sin(Math.PI * t);
+  const ripple = 1 + 0.12 * Math.sin(t * Math.PI * 5);
+  return layout.boxWidth * FLOW_SIGMA_RATIO * taper * ripple;
 }
 
 /** 띠 양 끝 10% 구간에서 점점 투명해지게. 비네팅이 띠에는 적용되지 않으므로 끝을 직접 흐려줌 */
@@ -234,114 +254,50 @@ function endFade(t: number): number {
   return Math.min(1, t / 0.1, (1 - t) / 0.1);
 }
 
-/**
-  t 위치의 입자 밀도(0~1). 박자가 다른 sin 두 개를 섞어 불규칙하게 진했다 옅어짐.
-  띠 전체가 고르게 채워지지 않고 '뭉친 곳 / 성긴 곳'의 리듬이 생김
-*/
-function density(t: number): number {
-  return 0.5 + 0.3 * Math.sin(Math.PI * 2 * (2.3 * t + 0.1)) + 0.2 * Math.sin(Math.PI * 2 * (5.7 * t + 0.6));
-}
-
-/** 가닥 중심이 t 위치에서 띠 중심선으로부터 떨어진 정도(띠 반폭 기준) */
-function strandCenter(strand: Strand, t: number): number {
-  return strand.base + strand.amplitude * Math.sin(Math.PI * 2 * (strand.frequency * t + strand.phase));
-}
-
-/** 가닥의 t 위치에서의 진하기(0.35~1). 가닥이 진해졌다 옅어지며 끊겼다 이어지는 듯 보임 */
-function strandFade(strand: Strand, t: number): number {
-  const wave = 0.5 + 0.5 * Math.sin(Math.PI * 2 * (strand.fadeFrequency * t + strand.fadePhase));
-  return 0.35 + 0.65 * wave;
-}
-
-function createStrands(random: () => number): Strand[] {
-  const strands: Strand[] = [];
-  for (let i = 0; i < STRAND_COUNT; i += 1) {
-    strands.push({
-      // 띠 폭(-0.7~0.7)에 고르게 나눠 배치하고 살짝씩 어긋나게
-      base: -0.7 + (1.4 * i) / (STRAND_COUNT - 1) + (random() - 0.5) * 0.15,
-      amplitude: between(random, 0.15, 0.4),
-      frequency: between(random, 1, 3),
-      phase: random(),
-      spread: between(random, 0.1, 0.22),
-      fadeFrequency: between(random, 1, 2.5),
-      fadePhase: random(),
-    });
-  }
-  return strands;
-}
-
 function createParticle(random: () => number): DustParticle {
-  // 띠 위치: 밀도가 낮은 곳일수록 입자가 덜 생기도록 거름(밀도 덩어리)
-  let t = random();
-  while (random() > 0.25 + 0.75 * density(t)) {
-    t = random();
+  let z = gaussianRandom(random);
+  while (Math.abs(z) > MAX_SIGMA) {
+    z = gaussianRandom(random);
   }
 
-  // 12%는 띠 바깥까지 넓게 흩날리는 halo
-  if (random() < 0.12) {
+  const t = random();
+  if (random() < LARGE_RATIO) {
     return {
       t,
-      strand: -1,
-      localOffset: bellRandom(random) * 3.5,
-      kind: "halo",
-      size: between(random, 0.3, 1),
-      alpha: between(random, 0.08, 0.3),
-      color: random() < PARCHMENT_RATIO ? PARCHMENT : GOLD,
-      streakLength: 0,
-      flare: false,
+      z,
+      size: between(random, LARGE_SIZE_MIN, LARGE_SIZE_MAX),
+      alpha: between(random, LARGE_ALPHA_MIN, LARGE_ALPHA_MAX),
+      color: LARGE_COLOR,
+      large: true,
     };
   }
 
-  const strand = Math.floor(random() * STRAND_COUNT);
-  const kindRoll = random();
-
-  // 띠 안쪽 입자 비율: 미세 가루 80% / 중간 입자 15% / 반짝이 5%
-  if (kindRoll < 0.05) {
-    return {
-      t,
-      strand,
-      localOffset: bellRandom(random),
-      kind: "sparkle",
-      size: between(random, 1.6, 2.8),
-      alpha: between(random, 0.7, 1),
-      color: random() < SPARKLE_PARCHMENT_RATIO ? PARCHMENT : GOLD,
-      streakLength: 0,
-      // 반짝이 중 2%(전체 입자 중 약 0.1%)만 십자 빛
-      flare: random() < 0.02,
-    };
-  }
-
-  const isMid = kindRoll < 0.2;
   return {
     t,
-    strand,
-    localOffset: bellRandom(random),
-    kind: isMid ? "mid" : "fine",
-    size: isMid ? between(random, 0.9, 1.6) : between(random, 0.3, 0.9),
-    alpha: isMid ? between(random, 0.4, 0.9) : between(random, 0.15, 0.55),
-    color: random() < PARCHMENT_RATIO ? PARCHMENT : GOLD,
-    // 15%는 진행 방향으로 짧은 빛줄기 → 흐르는 방향감
-    streakLength: random() < 0.15 ? between(random, 3, 9) : 0,
-    flare: false,
+    z,
+    size: between(random, SMALL_SIZE_MIN, SMALL_SIZE_MAX),
+    alpha: between(random, ALPHA_MIN, ALPHA_MAX),
+    color: DUST_COLORS[Math.floor(random() * DUST_COLORS.length)],
+    large: false,
   };
 }
 
-export function createRibbon(seed: number): RibbonData {
+/** 최대 개수만큼 미리 만들어 두고, 화면 크기에 따라 앞쪽 일부만 그림 */
+export function createParticles(seed: number): DustParticle[] {
   const random = createRandom(seed);
-  const strands = createStrands(random);
   const particles: DustParticle[] = [];
   for (let i = 0; i < MAX_PARTICLES; i += 1) {
     particles.push(createParticle(random));
   }
-  return { strands, particles };
+  return particles;
 }
 
 /**
   빛번짐 스프라이트(작은 캔버스에 미리 그린 둥근 빛).
-  Canvas의 shadowBlur는 그릴 때마다 블러를 계산해서 매우 느리므로,
-  빛 한 장을 미리 만들어 두고 drawImage로 찍어내는 방식을 씀
+  입자마다 shadowBlur를 쓰면 그릴 때마다 블러를 계산해서 매우 느리므로,
+  빛 한 장을 offscreen 캔버스에 미리 만들어 두고 drawImage로 찍어내는 방식을 씀
 */
-function createGlowSprite(): HTMLCanvasElement {
+export function createGlowSprite(): HTMLCanvasElement {
   const size = 64;
   const sprite = document.createElement("canvas");
   sprite.width = size;
@@ -354,163 +310,112 @@ function createGlowSprite(): HTMLCanvasElement {
 
   const center = size / 2;
   const gradient = ctx.createRadialGradient(center, center, 0, center, center, center);
-  gradient.addColorStop(0, "rgba(230, 213, 168, 1)");
-  gradient.addColorStop(0.25, "rgba(201, 162, 74, 0.6)");
-  gradient.addColorStop(1, "rgba(201, 162, 74, 0)");
+  gradient.addColorStop(0, "rgba(243, 223, 162, 1)");
+  gradient.addColorStop(0.3, "rgba(232, 199, 122, 0.5)");
+  gradient.addColorStop(1, "rgba(232, 199, 122, 0)");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
 
   return sprite;
 }
 
-/** 십자 빛 스프라이트. 배경의 큰 별(.stardust-flares)과 같은 모양으로 맞춤 */
-function createFlareSprite(): HTMLCanvasElement {
-  const size = 64;
-  const center = size / 2;
-  const sprite = document.createElement("canvas");
-  sprite.width = size;
-  sprite.height = size;
-
-  const ctx = sprite.getContext("2d");
-  if (!ctx) {
-    return sprite;
-  }
-
-  // 가로·세로 빛줄기: 가운데가 밝고 양 끝으로 사라지는 1px 선
-  const horizontal = ctx.createLinearGradient(0, 0, size, 0);
-  horizontal.addColorStop(0, "rgba(230, 213, 168, 0)");
-  horizontal.addColorStop(0.5, "rgba(230, 213, 168, 1)");
-  horizontal.addColorStop(1, "rgba(230, 213, 168, 0)");
-  ctx.fillStyle = horizontal;
-  ctx.fillRect(0, center - 0.5, size, 1);
-
-  const vertical = ctx.createLinearGradient(0, 0, 0, size);
-  vertical.addColorStop(0, "rgba(230, 213, 168, 0)");
-  vertical.addColorStop(0.5, "rgba(230, 213, 168, 1)");
-  vertical.addColorStop(1, "rgba(230, 213, 168, 0)");
-  ctx.fillStyle = vertical;
-  ctx.fillRect(center - 0.5, 0, 1, size);
-
-  // 가운데 작은 빛망울
-  const core = ctx.createRadialGradient(center, center, 0, center, center, 8);
-  core.addColorStop(0, "rgba(230, 213, 168, 1)");
-  core.addColorStop(1, "rgba(201, 162, 74, 0)");
-  ctx.fillStyle = core;
-  ctx.fillRect(center - 8, center - 8, 16, 16);
-
-  return sprite;
-}
-
-export function createSprites(): RibbonSprites {
-  return { glow: createGlowSprite(), flare: createFlareSprite() };
-}
+/** 광채 스탬프 개수. 촘촘할수록 광채가 매끈하게 이어짐 */
+const BAND_STEPS = 160;
 
 /**
-  바닥 안개 2겹.
-  - 넓은 안개: 띠 전체를 감싸는 옅은 금빛
-  - 중심 빛줄기: 띠 가운데를 따라 좁고 밝게 → 띠 안쪽이 은은하게 빛나 보임
-  스탬프가 서로 많이 겹치므로(lighter 합성으로 더해짐) 한 장의 alpha는 아주 낮게 둠
+  중심선 광채 레이어를 별도(offscreen) 캔버스에 한 번 그려 둔다.
+
+  방법: 금빛 한 색의 둥근 그라데이션을 중심선을 따라 촘촘히 찍는다(일반 합성).
+  겹칠수록 불투명도가 1에 수렴하므로 중심은 고르게 채워지고 가장자리만 부드럽게 사라짐 = 블러된 띠.
+  이 레이어 전체를 BAND_ALPHA로 한 번에 얹으니, 아무리 겹쳐도 최종 밝기가 BAND_ALPHA를 넘지 않음.
+  (ctx.filter의 blur는 Safari 지원이 불안정해서 이 방식을 씀)
+
+  화면 크기가 바뀔 때만 다시 만들고, 애니메이션 단계에서도 매 프레임 drawImage로 깔기만 하면 됨
 */
-function drawHaze(ctx: CanvasRenderingContext2D, layout: RibbonLayout, glow: HTMLCanvasElement): void {
-  for (let i = 0; i < HAZE_STEPS; i += 1) {
-    const t = i / (HAZE_STEPS - 1);
-    const { point } = samplePath(t, layout);
-    const halfWidth = bandHalfWidth(t, layout);
-    const fade = endFade(t);
+export function createGlowBand(layout: RibbonLayout, dpr: number): HTMLCanvasElement {
+  const width = layout.originX * 2 + layout.boxWidth;
+  const band = document.createElement("canvas");
+  band.width = Math.round(width * dpr);
+  band.height = Math.round(layout.height * dpr);
 
-    const wide = halfWidth * 2.6;
-    ctx.globalAlpha = 0.009 * fade;
-    ctx.drawImage(glow, point.x - wide, point.y - wide, wide * 2, wide * 2);
-
-    const core = halfWidth * 0.9;
-    ctx.globalAlpha = 0.022 * fade;
-    ctx.drawImage(glow, point.x - core, point.y - core, core * 2, core * 2);
+  const ctx = band.getContext("2d");
+  if (!ctx) {
+    return band;
   }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  for (let i = 0; i < BAND_STEPS; i += 1) {
+    const t = i / (BAND_STEPS - 1);
+    const { point } = samplePath(t, layout);
+    const radius = flowSigma(t, layout) * BAND_RADIUS;
+
+    const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius);
+    gradient.addColorStop(0, `rgba(${BAND_COLOR}, 1)`);
+    gradient.addColorStop(0.5, `rgba(${BAND_COLOR}, 0.4)`);
+    gradient.addColorStop(1, `rgba(${BAND_COLOR}, 0)`);
+
+    // 한 장은 옅게 찍고 여러 장이 겹쳐 쌓이게. 양 끝은 endFade로 점점 옅어짐
+    ctx.globalAlpha = 0.2 * endFade(t);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(point.x - radius, point.y - radius, radius * 2, radius * 2);
+  }
+
+  return band;
 }
 
 /**
-  띠 전체를 그린다. ① 바닥 안개 → ② 입자.
-  'lighter' 합성은 그리는 순서와 상관없이 빛이 더해지기만 하므로, 입자 종류별로 나눠 그리지 않고 한 번에 돎.
+  띠 전체를 그린다. ① 중심선 광채 → ② 입자.
+  매번 clearRect로 완전히 지우고 새로 그림(반투명으로 덮어 지우는 trail 효과는 쓰지 않음 → 꼬리 없음).
 
   [애니메이션 단계]
-  - 매 프레임 이 함수를 다시 호출. 그 전에 각 입자의 t를 (t + 속도) % 1 로 갱신하면 가닥을 따라 흐르고,
-    끝에서 처음으로 돌아가도 endFade 덕분에 갑자기 나타나거나 사라지지 않음
-  - 안개는 움직이지 않으므로 별도 캔버스에 한 번만 그려 두고 매 프레임 drawImage로 깔기만 할 것 (성능)
-  - 모바일에서는 움직이는 입자 수를 1만 개 정도로 줄이는 것을 검토
+  - 매 프레임 이 함수를 다시 호출. 그 전에 각 입자의 t를 (t + 아주 작은 속도) % 1 로 갱신하면
+    곡선을 따라 느리게 흐르고, 끝에서 처음으로 돌아가도 endFade 덕분에 갑자기 나타나거나 사라지지 않음
+  - 모바일에서 프레임이 떨어지면 MIN_PARTICLES·AREA_PER_PARTICLE부터 조정
 */
 export function drawRibbon(
   ctx: CanvasRenderingContext2D,
   layout: RibbonLayout,
-  ribbon: RibbonData,
+  particles: DustParticle[],
   count: number,
-  sprites: RibbonSprites,
+  glow: HTMLCanvasElement,
+  glowBand: HTMLCanvasElement,
 ): void {
-  ctx.clearRect(0, 0, layout.originX * 2 + layout.boxWidth, layout.height);
+  const width = layout.originX * 2 + layout.boxWidth;
+  ctx.clearRect(0, 0, width, layout.height);
 
-  // 'lighter' = 겹치는 빛이 더해져 밝아짐. 금가루가 몰린 곳이 자연스럽게 더 빛나 보임
-  ctx.globalCompositeOperation = "lighter";
-  ctx.lineCap = "round";
-
-  // ① 바닥 안개
-  drawHaze(ctx, layout, sprites.glow);
+  // ① 중심선 광채: 미리 그려 둔 레이어를 BAND_ALPHA로 한 번만 얹음
+  ctx.globalAlpha = BAND_ALPHA;
+  ctx.drawImage(glowBand, 0, 0, width, layout.height);
 
   // ② 입자
-  const drawCount = Math.min(count, ribbon.particles.length);
+  const drawCount = Math.min(count, particles.length);
   for (let i = 0; i < drawCount; i += 1) {
-    const particle = ribbon.particles[i];
-    const { point, tangent, normal } = samplePath(particle.t, layout);
+    const particle = particles[i];
 
-    // 띠 중심선에서 벌어질 거리: 가닥 위치 + 가닥 안에서의 위치. halo는 가닥 없이 중심선 기준
-    let offset: number;
-    let strength: number;
-    if (particle.strand < 0) {
-      offset = particle.localOffset;
-      strength = 1;
-    } else {
-      const strand = ribbon.strands[particle.strand];
-      offset = strandCenter(strand, particle.t) + particle.localOffset * strand.spread;
-      // 띠 가장자리로 갈수록 살짝(최대 25%) 어두워짐 × 가닥 진하기
-      strength = (1 - Math.min(1, Math.abs(offset)) * 0.25) * strandFade(strand, particle.t);
-    }
-
-    const alpha = particle.alpha * endFade(particle.t) * strength;
+    // 바깥(|z|가 클수록)으로 갈수록 최대 60%까지 어두워져, 가장자리가 부드럽게 사라짐
+    const edgeFade = 1 - (Math.abs(particle.z) / MAX_SIGMA) * 0.6;
+    const alpha = particle.alpha * endFade(particle.t) * edgeFade;
     if (alpha <= 0.01) {
       continue;
     }
 
-    const distance = offset * bandHalfWidth(particle.t, layout);
+    const { point, normal } = samplePath(particle.t, layout);
+    const distance = particle.z * flowSigma(particle.t, layout);
     const x = point.x + normal.x * distance;
     const y = point.y + normal.y * distance;
 
-    if (particle.kind === "sparkle") {
-      // 반짝이: 입자 크기의 6배짜리 빛번짐을 먼저 깔고 그 위에 점을 찍음
-      // [애니메이션 단계] 반짝이만 alpha에 sin(시간 + 입자별 위상)을 곱해 각자 깜빡이게 할 예정
-      const glow = particle.size * 6;
-      ctx.globalAlpha = alpha * 0.5;
-      ctx.drawImage(sprites.glow, x - glow / 2, y - glow / 2, glow, glow);
-
-      if (particle.flare) {
-        // [애니메이션 단계] 십자 빛은 배경의 큰 별처럼 크기·밝기가 천천히 커졌다 작아지게
-        const flare = particle.size * 12;
-        ctx.globalAlpha = alpha;
-        ctx.drawImage(sprites.flare, x - flare / 2, y - flare / 2, flare, flare);
-      }
+    if (particle.large) {
+      // 큰 입자만 빛번짐. 'lighter'로 더하되 alpha를 낮춰 겹쳐도 하얗게 타지 않게
+      // [애니메이션 단계] 큰 입자는 alpha에 sin(시간 + 입자별 위상)을 곱해 은은하게 깜빡이게
+      const glowSize = particle.size * GLOW_SCALE;
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = alpha * GLOW_ALPHA;
+      ctx.drawImage(glow, x - glowSize / 2, y - glowSize / 2, glowSize, glowSize);
     }
 
+    // 입자 본체는 일반 합성(source-over): 촘촘한 중심부에서도 밝기가 누적되지 않아 하얗게 타지 않음
+    ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = alpha;
-
-    if (particle.streakLength > 0) {
-      // 짧은 빛줄기: 입자 위치를 가운데로 두고 진행 방향(접선)으로 양쪽에 반씩
-      const half = particle.streakLength / 2;
-      ctx.strokeStyle = particle.color;
-      ctx.lineWidth = Math.max(0.5, particle.size * 0.7);
-      ctx.beginPath();
-      ctx.moveTo(x - tangent.x * half, y - tangent.y * half);
-      ctx.lineTo(x + tangent.x * half, y + tangent.y * half);
-      ctx.stroke();
-      continue;
-    }
-
     ctx.fillStyle = particle.color;
     if (particle.size < 1.2) {
       // 아주 작은 가루는 원 대신 사각형으로 찍음(눈으로는 구분 안 되고 훨씬 빠름)
@@ -525,4 +430,32 @@ export function drawRibbon(
   // 다른 그리기에 영향이 없도록 원래 상태로 되돌림
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = "source-over";
+
+  if (DEBUG_PATH) {
+    drawDebugPath(ctx, layout);
+  }
+}
+
+/** [디버그] 경로 중심선과 FLOW_PATH 점을 그려 경로가 의도대로 지나가는지 확인 */
+function drawDebugPath(ctx: CanvasRenderingContext2D, layout: RibbonLayout): void {
+  const steps = 300;
+  ctx.strokeStyle = "#00e5ff";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 0; i <= steps; i += 1) {
+    const { point } = samplePath(i / steps, layout);
+    if (i === 0) {
+      ctx.moveTo(point.x, point.y);
+    } else {
+      ctx.lineTo(point.x, point.y);
+    }
+  }
+  ctx.stroke();
+
+  ctx.fillStyle = "#ff3b3b";
+  for (const p of FLOW_PATH) {
+    ctx.beginPath();
+    ctx.arc(layout.originX + p.x * layout.boxWidth, p.y * layout.height, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
