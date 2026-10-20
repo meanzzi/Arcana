@@ -1,8 +1,3 @@
-/*
-  시드가 있는 랜덤(mulberry32).
-  Math.random()은 새로고침마다 결과가 달라지므로, 같은 시드면 항상 같은 결과가 나오는 랜덤을 씀.
-  금가루 띠·잔별처럼 '매번 같은 모양'이어야 하는 장식에서 공용으로 사용
-*/
 export function createRandom(seed: number): () => number {
   let state = seed >>> 0;
   return () => {
@@ -13,7 +8,11 @@ export function createRandom(seed: number): () => number {
   };
 }
 
-export function between(random: () => number, min: number, max: number): number {
+export function between(
+  random: () => number,
+  min: number,
+  max: number,
+): number {
   return min + random() * (max - min);
 }
 

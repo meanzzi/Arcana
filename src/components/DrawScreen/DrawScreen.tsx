@@ -1,39 +1,39 @@
 import Card from "../Card/Card";
+import GoldButton from "../GoldButton/GoldButton";
 import { between, createRandom } from "../../utils/random";
 import "./DrawScreen.css";
 
 /* ================= 튜닝용 상수 ================= */
 
-/**
-  화면 2에서 쓰는 카드 장수. 메이저 아르카나 22장.
-  부채꼴에서 사용자가 22장 중 한 장을 직접 고르므로, 워싱부터 같은 22장을 써서
-  단계가 바뀔 때 장수·크기 차이가 드러나지 않게 함
-*/
 const CARD_COUNT = 22;
-/** 배치를 매번 같게 만드는 시드. 숫자를 바꾸면 다른 모양으로 흩어짐 */
 const SCATTER_SEED = 7;
-/** 가운데에서 가장 바깥 카드 중심까지 거리(테이블 영역 반폭·반높이 대비 %) */
-const SCATTER_RADIUS = 92;
-/** 위치·기울기 흔들림. 클수록 규칙성이 사라지고 어지러워짐 */
-const RADIUS_JITTER = 10;
+const SCATTER_RADIUS = 92; // 가운데에서 가장 바깥 카드 중심까지 거리(테이블 영역 반폭·반높이 대비 %)
+const RADIUS_JITTER = 10; // 위치·기울기 흔들림. 클수록 규칙성이 사라지고 어지러워짐
 const TILT_JITTER = 30;
 
-/**
-  부채꼴 전체 펼침 각도(deg). 맨 왼쪽 카드 -50도 ~ 맨 오른쪽 +50도.
-  22장이 겹치므로 넓게 펼쳐야 카드마다 고를 수 있는 폭이 생김 (이웃 카드와 약 4.8도 간격)
-*/
-const FAN_SPREAD = 100;
+const FAN_SPREAD = 100; // 부채꼴 전체 펼침 각도, 맨 왼쪽 카드 -50도 ~ 맨 오른쪽 +50도.
 
 /* =============================================== */
 
-/** 황금각(약 137.5도). 해바라기 씨처럼 점을 겹치지 않고 고르게 퍼뜨리는 각도 */
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
-/** 화면 2의 단계. 결과 상태는 다음 작업에서 추가 */
-export type DrawPhase = "scattered" | "fanned";
+export type DrawPhase = "scattered" | "fanned" | "result"; // 화면 2의 단계
+
+type TablePhase = Exclude<DrawPhase, "result">;
+
+/*
+  [퍼블리싱용 임시] 결과 화면에 보여줄 카드와 해석.
+  기능 단계에서 cards.json의 랜덤 배정 결과로 교체
+*/
+const SAMPLE_RESULT = {
+  name: "The Moon",
+  nameKr: "달",
+  keywords: ["불안", "직관", "환상", "무의식"],
+  reading:
+    "눈앞의 길이 흐릿하게 보이는 날이에요. 모든 것을 당장 분명히 하려 하기보다, 마음속에서 조용히 들려오는 느낌을 믿어 보세요. 안개는 시간이 지나면 걷힙니다.",
+};
 
 type CardPlacement = {
-  /** 테이블 영역 기준 카드 중심 위치(%) */
   x: number;
   y: number;
   rotation: number;
@@ -52,7 +52,8 @@ function createScatter(): CardPlacement[] {
     const angle = index * GOLDEN_ANGLE;
     // 제곱근을 쓰면 바깥으로 갈수록 간격이 넓어져, 면적당 카드 수가 고르게 됨
     const radius =
-      Math.sqrt((index + 0.5) / CARD_COUNT) * SCATTER_RADIUS + between(random, -RADIUS_JITTER, RADIUS_JITTER);
+      Math.sqrt((index + 0.5) / CARD_COUNT) * SCATTER_RADIUS +
+      between(random, -RADIUS_JITTER, RADIUS_JITTER);
     // 접선 방향 = 중심에서 바깥을 향한 각도 + 90도
     const tangent = (angle * 180) / Math.PI + 90;
     return {
@@ -79,7 +80,7 @@ function createFan(): CardPlacement[] {
   }));
 }
 
-const PLACEMENTS: Record<DrawPhase, CardPlacement[]> = {
+const PLACEMENTS: Record<TablePhase, CardPlacement[]> = {
   scattered: createScatter(),
   fanned: createFan(),
 };
@@ -89,6 +90,39 @@ type DrawScreenProps = {
 };
 
 function DrawScreen({ phase }: DrawScreenProps) {
+  if (phase === "result") {
+    return (
+      // 결과 상태
+      <div className="draw-screen draw-screen--result">
+        <Card
+          faceUp
+          name={SAMPLE_RESULT.name}
+          className="draw-screen__result-card"
+        />
+
+        <section className="draw-screen__reading">
+          <h2 className="draw-screen__name">{SAMPLE_RESULT.nameKr}</h2>
+          <ul className="draw-screen__keywords">
+            {SAMPLE_RESULT.keywords.map((keyword) => (
+              <li key={keyword}>{keyword}</li>
+            ))}
+          </ul>
+          <p className="draw-screen__text">{SAMPLE_RESULT.reading}</p>
+        </section>
+
+        {/* 공유하기는 보조 버튼, 다시 뽑기가 주 버튼 */}
+        <div className="draw-screen__actions">
+          <GoldButton variant="subtle" className="draw-screen__action-button">
+            공유하기
+          </GoldButton>
+          <GoldButton className="draw-screen__action-button">
+            다시 뽑기
+          </GoldButton>
+        </div>
+      </div>
+    );
+  }
+
   return (
     // 화면 2(뽑기+결과). 단계가 바뀌어도 같은 카드 22장(같은 요소)의 위치만 바뀌는 구조라,
     // 애니메이션 단계에서 흩어진 상태 → 부채꼴로 자연스럽게 이어 움직일 수 있음

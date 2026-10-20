@@ -1,5 +1,12 @@
 import { useEffect, useRef } from "react";
-import { createGlowBand, createGlowSprite, createParticles, drawRibbon, getLayout, getParticleCount } from "./goldDust";
+import {
+  createGlowBand,
+  createGlowSprite,
+  createParticles,
+  drawRibbon,
+  getLayout,
+  getParticleCount,
+} from "./goldDust";
 import "./GoldDustRibbon.css";
 
 // 입자 배치를 고정하는 시드. 값을 바꾸면 같은 S자 안에서 금가루 흩어진 모양만 달라짐
@@ -34,7 +41,6 @@ function GoldDustRibbon() {
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
 
       // 실제 픽셀 수는 dpr배로 키우고, 좌표계는 CSS px 그대로 쓰도록 배율을 걸어둠 → 레티나에서도 선명
-      // (canvas.width를 다시 설정하면 컨텍스트 상태가 초기화되므로 setTransform은 매번 다시 호출)
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -43,7 +49,14 @@ function GoldDustRibbon() {
       // 중심선 광채는 화면 크기에 따라 모양이 바뀌므로 리사이즈 때마다 다시 만듦
       // [애니메이션 단계] 매 프레임이 아니라 여기(리사이즈)에서만 만들고 tick에서는 재사용할 것
       const glowBand = createGlowBand(layout, dpr);
-      drawRibbon(ctx, layout, particles, getParticleCount(layout), glow, glowBand);
+      drawRibbon(
+        ctx,
+        layout,
+        particles,
+        getParticleCount(layout),
+        glow,
+        glowBand,
+      );
     };
 
     // 창 크기를 끄는 동안 크기 변경이 연달아 들어오므로, 한 프레임에 한 번만 다시 그리도록 모음
@@ -71,7 +84,9 @@ function GoldDustRibbon() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="gold-dust-ribbon" aria-hidden="true" />;
+  return (
+    <canvas ref={canvasRef} className="gold-dust-ribbon" aria-hidden="true" />
+  );
 }
 
 export default GoldDustRibbon;

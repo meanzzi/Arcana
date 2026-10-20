@@ -5,13 +5,6 @@
   - 높이는 시작 화면처럼 100dvh에 딱 맞춰 스크롤 없이 한눈에 보이게 함
 */
 .draw-screen {
-  /*
-    카드 한 장의 폭. 워싱·부채꼴 모든 단계에서 같은 크기를 써서, 단계가 바뀌어도 카드 크기가 변하지 않음.
-    가장 넓게 퍼지는 부채꼴(22장, ±50도)의 전체 폭이 카드 폭의 약 5.3배, 높이가 약 2.7배라 그에 맞춤
-    - 17vw: 폭 기준. 부채꼴 전체 폭이 화면 폭의 약 90%가 됨 (휴대폰에서 이 값으로 정해짐)
-    - 20dvh: 높이 기준. 가로로 넓은 데스크톱에서 부채꼴이 위아래로 넘치지 않게 함 (데스크톱에서 이 값으로 정해짐)
-    - 56px~180px 사이로 제한
-  */
   --card-w: clamp(56px, min(17vw, 20dvh), 180px);
   /* 부채꼴에서 카드 중심부터 회전축까지 거리. 클수록 부채가 완만하게 넓어짐 */
   --fan-radius: calc(var(--card-w) * 2.3);
@@ -40,8 +33,7 @@
 
 /*
   부채꼴: 회전축을 카드 중심(높이 1.5배의 절반 = 0.75)에서 --fan-radius만큼 위로 옮김.
-  축이 위에 있어서 카드 아래쪽이 사용자 쪽으로 활짝 벌어짐(∪ 모양) →
-  리더가 사용자 앞 테이블에 카드를 펼쳐 준 것처럼 보임
+  축이 위에 있어서 카드 아래쪽이 사용자 쪽으로 활짝 벌어짐(∪ 모양) 
 */
 .draw-screen--fanned .draw-screen__slot {
   transform-origin: 50% calc(var(--card-w) * 0.75 - var(--fan-radius));
@@ -50,4 +42,78 @@
 /* 카드 기본 폭(Card.css의 140px) 대신 슬롯 폭에 맞춤 */
 .draw-screen__slot .draw-screen__card {
   width: 100%;
+}
+
+.draw-screen--result {
+  max-width: 480px;
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: clamp(24px, 6dvh, 64px) 24px clamp(16px, 4dvh, 40px);
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(20px, 4dvh, 36px);
+}
+
+.draw-screen__result-card.card {
+  width: clamp(120px, min(44vw, 30dvh), 220px);
+  flex-shrink: 0;
+}
+
+.draw-screen__reading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.draw-screen__name {
+  font-family: var(--font-kr);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-gold);
+  letter-spacing: 0.08em;
+}
+
+.draw-screen__keywords {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  list-style: none;
+  font-size: 0.9rem;
+  color: var(--color-champagne);
+  letter-spacing: 0.05em;
+}
+
+.draw-screen__keywords li + li::before {
+  content: "·";
+  margin: 0 0.6em;
+  color: rgba(201, 162, 74, 0.6);
+}
+
+.draw-screen__text {
+  /* 한 줄이 너무 길면 읽기 힘들어서 글자 수 기준으로 폭 제한 */
+  max-width: 26em;
+  margin-top: 8px;
+  font-size: 1rem;
+  line-height: 1.8;
+  color: var(--color-parchment);
+  /* 한글이 단어 중간에서 끊기지 않게 */
+  word-break: keep-all;
+}
+
+.draw-screen__actions {
+  margin-top: auto;
+  flex-shrink: 0;
+  display: flex;
+  gap: 12px;
+}
+
+/* 두 버튼을 나란히 둬도 좁은 휴대폰(360px)에서 넘치지 않게 기본 170px보다 줄임 */
+.draw-screen__action-button.gold-button {
+  width: 140px;
 }

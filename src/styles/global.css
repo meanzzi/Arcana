@@ -5,25 +5,19 @@
 }
 
 body {
-  background: linear-gradient(160deg, var(--color-bg-deep) 0%, var(--color-bg-light) 100%);
+  background: linear-gradient(
+    160deg,
+    var(--color-bg-deep) 0%,
+    var(--color-bg-light) 100%
+  );
   color: var(--color-parchment);
   font-family: var(--font-kr);
-  /* 모바일에서 100vh는 주소창만큼 실제 화면보다 커서 스크롤이 생기므로, 지원 브라우저는 dvh(실제 보이는 높이) 사용 */
   min-height: 100vh;
   min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
 }
 
-/*
-  배경 잔별은 캔버스(components/StarField)로 그림.
-  예전 CSS 별가루(body::before)는 점이 크고 금색 한 가지라 시안의 '고운 잔별' 느낌이 안 나서 대체함
-*/
-
-/*
-  작은 흰색 4각 반짝임 4개. 시안처럼 '천천히 은은하게 깜빡이는 정도'가 되도록 작게.
-  #root(실제 화면)보다 아래에 깔림
-*/
 .stardust-flares {
   position: fixed;
   inset: 0;
@@ -31,7 +25,6 @@ body {
   pointer-events: none;
 }
 
-/* 크기는 예전(가운데 4px, 빛줄기 26px)의 절반 이하 */
 .stardust-flares__star {
   position: absolute;
   width: 2px;
@@ -40,7 +33,6 @@ body {
   border-radius: 0.5px;
   transform: rotate(45deg);
   box-shadow: 0 0 4px 1px rgba(255, 255, 255, 0.5);
-  /* 천천히 깜빡이도록 한 주기 8초 */
   animation: star-twinkle 8s ease-in-out infinite;
 }
 
@@ -50,7 +42,12 @@ body {
   position: absolute;
   top: 50%;
   left: 50%;
-  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.85), transparent);
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.85),
+    transparent
+  );
 }
 
 .stardust-flares__star::before {
@@ -90,7 +87,6 @@ body {
 }
 
 @keyframes star-twinkle {
-  /* 은은하게: 밝기·크기 변화 폭을 예전(0.4~1, 0.85~1.15 배)보다 좁게 */
   0%,
   100% {
     opacity: 0.25;
@@ -102,17 +98,19 @@ body {
   }
 }
 
-/* 가장자리를 어둡게 하는 비네팅. 십자 별보다 위, #root(잔별·금가루 캔버스·실제 화면)보다는 아래 */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 45%, transparent 45%, rgba(4, 7, 18, 0.65) 100%);
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    transparent 45%,
+    rgba(4, 7, 18, 0.65) 100%
+  );
 }
 
-/* 별가루·비네팅보다 위 쌓임 순서를 보장 */
 #root {
   position: relative;
   z-index: 1;

@@ -1,0 +1,83 @@
+.gold-button {
+  --gold-hi: #f3dfa2;
+  --gold: #e8c77a;
+  --gold-line: rgba(201, 162, 77, 0.35);
+  --btn-bg: #0e1838;
+  --sweep-speed: 4.5s;
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: 170px;
+  height: 52px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--gold);
+  font-family: "Nanum Myeongjo", "Noto Serif KR", serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent; /* iOS Safari에서 터치 시 회색 하이라이트가 생기지 않도록 */
+  transition:
+    filter 0.4s ease,
+    transform 0.15s ease;
+}
+
+.gold-button::before {
+  content: "";
+  position: absolute;
+  inset: -70px;
+  z-index: -2;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 68%,
+    rgba(232, 199, 122, 0.25) 80%,
+    var(--gold-hi) 88%,
+    transparent 93%
+  );
+  animation: gold-sweep-spin var(--sweep-speed) linear infinite;
+}
+
+.gold-button::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  border-radius: 999px;
+  background: var(--btn-bg);
+  box-shadow: inset 0 0 0 1px var(--gold-line);
+}
+
+.gold-button:hover,
+.gold-button:focus-visible {
+  filter: drop-shadow(0 0 10px rgba(232, 199, 122, 0.45));
+  outline: none;
+}
+
+.gold-button:active {
+  transform: scale(0.97);
+}
+
+/* 보조 버튼: 회전 빛을 끄고 금색 선을 조금 더 진하게 해서 테두리만 보이게 */
+.gold-button--subtle {
+  --gold-line: rgba(201, 162, 77, 0.6);
+}
+
+.gold-button--subtle::before {
+  display: none;
+}
+
+@keyframes gold-sweep-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gold-button::before {
+    animation: none;
+    background: rgba(232, 199, 122, 0.6);
+  }
+}
