@@ -1,5 +1,6 @@
 import Card from "../Card/Card";
 import GoldButton from "../GoldButton/GoldButton";
+import { useShare } from "../../hooks/useShare";
 import { between, createRandom } from "../../utils/random";
 import type { DrawResult } from "../../types/card";
 import "./DrawScreen.css";
@@ -84,6 +85,7 @@ type DrawScreenProps = {
 function DrawScreen({ phase, result, onSelect, onRedraw }: DrawScreenProps) {
   // 카드를 고를 수 있는 건 부채꼴 단계뿐
   const selectable = phase === "fanned";
+  const { notice, share } = useShare();
 
   if (phase === "result") {
     if (!result) return null;
@@ -107,12 +109,20 @@ function DrawScreen({ phase, result, onSelect, onRedraw }: DrawScreenProps) {
         </section>
 
         <div className="draw-screen__actions">
-          <GoldButton variant="subtle" className="draw-screen__action-button">
+          <GoldButton
+            variant="subtle"
+            className="draw-screen__action-button"
+            onClick={() => share(result)}
+          >
             공유하기
           </GoldButton>
           <GoldButton className="draw-screen__action-button" onClick={onRedraw}>
             다시 뽑기
           </GoldButton>
+          {/* 복사 결과 안내. aria-live라 화면 낭독기도 읽어 줌 */}
+          <p className="draw-screen__notice" aria-live="polite">
+            {notice}
+          </p>
         </div>
       </div>
     );

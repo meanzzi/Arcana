@@ -109,6 +109,7 @@
 }
 
 .draw-screen__actions {
+  position: relative;
   margin-top: auto;
   flex-shrink: 0;
   display: flex;
@@ -118,4 +119,16 @@
 /* 두 버튼을 나란히 둬도 좁은 휴대폰(360px)에서 넘치지 않게 기본 170px보다 줄임 */
 .draw-screen__action-button.gold-button {
   width: 140px;
+}
+
+/* 버튼 위에 잠깐 떠오르는 안내 문구. 자리를 차지하지 않게 absolute로 띄움 */
+.draw-screen__notice {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.85rem;
+  color: var(--color-champagne);
+  pointer-events: none;
 }
