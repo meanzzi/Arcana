@@ -4,17 +4,33 @@ import "./DrawScreen.css";
 
 /* ================= 튜닝용 상수 ================= */
 
-/** 워싱에 쓰는 카드 장수 (뒷면이라 실제 22장과 무관) */
-const CARD_COUNT = 10;
+/**
+  화면 2에서 쓰는 카드 장수. 메이저 아르카나 22장.
+  부채꼴에서 사용자가 22장 중 한 장을 직접 고르므로, 워싱부터 같은 22장을 써서
+  단계가 바뀔 때 장수·크기 차이가 드러나지 않게 함
+*/
+const CARD_COUNT = 22;
 /** 배치를 매번 같게 만드는 시드. 숫자를 바꾸면 다른 모양으로 흩어짐 */
 const SCATTER_SEED = 7;
-/** 가운데에서 카드 중심까지 거리 범위(테이블 영역 반폭·반높이 대비 %) */
-const RADIUS_MIN = 18;
-const RADIUS_MAX = 62;
-/** 소용돌이 방향(접선)에서 벗어나는 기울기 흔들림(deg) */
+/** 가운데에서 가장 바깥 카드 중심까지 거리(테이블 영역 반폭·반높이 대비 %) */
+const SCATTER_RADIUS = 92;
+/** 위치·기울기 흔들림. 클수록 규칙성이 사라지고 어지러워짐 */
+const RADIUS_JITTER = 10;
 const TILT_JITTER = 30;
 
+/**
+  부채꼴 전체 펼침 각도(deg). 맨 왼쪽 카드 -50도 ~ 맨 오른쪽 +50도.
+  22장이 겹치므로 넓게 펼쳐야 카드마다 고를 수 있는 폭이 생김 (이웃 카드와 약 4.8도 간격)
+*/
+const FAN_SPREAD = 100;
+
 /* =============================================== */
+
+/** 황금각(약 137.5도). 해바라기 씨처럼 점을 겹치지 않고 고르게 퍼뜨리는 각도 */
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+
+/** 화면 2의 단계. 결과 상태는 다음 작업에서 추가 */
+export type DrawPhase = "scattered" | "fanned";
 
 type CardPlacement = {
   /** 테이블 영역 기준 카드 중심 위치(%) */
@@ -25,16 +41,18 @@ type CardPlacement = {
 
 /*
   흩어진 상태: 테이블 위에 카드를 펼쳐놓고 휘젓는 도중의 한 장면.
-  카드들이 가운데를 빙 둘러 놓이고 각자 원의 접선 방향으로 기울어져 있어서,
-  정지 화면에서도 '한 방향으로 도는 흐름'이 느껴지게 함.
+  - 위치: 황금각 배치(카드마다 황금각만큼 돌리고, 순서가 뒤일수록 바깥으로)라
+    22장이 한쪽에 몰리거나 줄지어 보이지 않고 테이블 전체에 고르게 퍼짐
+  - 기울기: 각자 원의 접선 방향으로 기울여, 정지 화면에서도 '한 방향으로 도는 흐름'이 느껴지게 함
   시드 랜덤이라 새로고침해도 같은 배치. 애니메이션 단계에서는 GSAP이 이 위치들을 계속 바꿔 줌
 */
 function createScatter(): CardPlacement[] {
   const random = createRandom(SCATTER_SEED);
   return Array.from({ length: CARD_COUNT }, (_, index) => {
-    // 각도는 고르게 나누고 조금씩만 흔들어, 한쪽에 몰리지 않게 함
-    const angle = (index / CARD_COUNT) * Math.PI * 2 + between(random, -0.3, 0.3);
-    const radius = between(random, RADIUS_MIN, RADIUS_MAX);
+    const angle = index * GOLDEN_ANGLE;
+    // 제곱근을 쓰면 바깥으로 갈수록 간격이 넓어져, 면적당 카드 수가 고르게 됨
+    const radius =
+      Math.sqrt((index + 0.5) / CARD_COUNT) * SCATTER_RADIUS + between(random, -RADIUS_JITTER, RADIUS_JITTER);
     // 접선 방향 = 중심에서 바깥을 향한 각도 + 90도
     const tangent = (angle * 180) / Math.PI + 90;
     return {
@@ -45,14 +63,38 @@ function createScatter(): CardPlacement[] {
   });
 }
 
-const SCATTER = createScatter();
+/*
+  부채꼴 상태: 모든 카드가 같은 자리에 겹쳐 있고 각도만 다름.
+  회전 중심(transform-origin)을 카드 위쪽 한 점으로 옮겨 두어서(CSS 참고),
+  각도만 바꿔도 위 한 점을 축으로 좌우 대칭으로 펼쳐짐.
+  축이 위에 있으면 +각도가 카드를 왼쪽으로 보내므로, 왼쪽 카드(앞 순서)부터 +50도 → -50도로 줌.
+  DOM 순서상 뒤 카드가 위에 겹치므로 오른쪽 카드가 왼쪽 카드 위에 올라감
+*/
+function createFan(): CardPlacement[] {
+  const step = FAN_SPREAD / (CARD_COUNT - 1);
+  return Array.from({ length: CARD_COUNT }, (_, index) => ({
+    x: 50,
+    y: 50,
+    rotation: FAN_SPREAD / 2 - index * step,
+  }));
+}
 
-function DrawScreen() {
+const PLACEMENTS: Record<DrawPhase, CardPlacement[]> = {
+  scattered: createScatter(),
+  fanned: createFan(),
+};
+
+type DrawScreenProps = {
+  phase: DrawPhase;
+};
+
+function DrawScreen({ phase }: DrawScreenProps) {
   return (
-    // 화면 2(뽑기+결과). 지금은 ① 흩어진 상태만 있음. 부채꼴·결과 상태는 다음 작업에서 추가
-    <div className="draw-screen">
+    // 화면 2(뽑기+결과). 단계가 바뀌어도 같은 카드 22장(같은 요소)의 위치만 바뀌는 구조라,
+    // 애니메이션 단계에서 흩어진 상태 → 부채꼴로 자연스럽게 이어 움직일 수 있음
+    <div className={`draw-screen draw-screen--${phase}`}>
       <div className="draw-screen__table">
-        {SCATTER.map((placement, index) => (
+        {PLACEMENTS[phase].map((placement, index) => (
           // 위치는 감싸개(slot)에, 카드 자체 transform은 비워 둠(나중에 GSAP이 카드를 직접 다룸)
           <div
             key={index}
