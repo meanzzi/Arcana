@@ -1,37 +1,26 @@
 import Card from "../Card/Card";
 import GoldButton from "../GoldButton/GoldButton";
 import { between, createRandom } from "../../utils/random";
+import type { DrawResult } from "../../types/card";
 import "./DrawScreen.css";
 
 /* ================= 튜닝용 상수 ================= */
 
 const CARD_COUNT = 22;
 const SCATTER_SEED = 7;
-const SCATTER_RADIUS = 92; // 가운데에서 가장 바깥 카드 중심까지 거리(테이블 영역 반폭·반높이 대비 %)
-const RADIUS_JITTER = 10; // 위치·기울기 흔들림. 클수록 규칙성이 사라지고 어지러워짐
+const SCATTER_RADIUS = 92;
+const RADIUS_JITTER = 10;
 const TILT_JITTER = 30;
 
-const FAN_SPREAD = 100; // 부채꼴 전체 펼침 각도, 맨 왼쪽 카드 -50도 ~ 맨 오른쪽 +50도.
+const FAN_SPREAD = 100;
 
 /* =============================================== */
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
-export type DrawPhase = "scattered" | "fanned" | "result"; // 화면 2의 단계
+export type DrawPhase = "scattered" | "fanned" | "result";
 
 type TablePhase = Exclude<DrawPhase, "result">;
-
-/*
-  [퍼블리싱용 임시] 결과 화면에 보여줄 카드와 해석.
-  기능 단계에서 cards.json의 랜덤 배정 결과로 교체
-*/
-const SAMPLE_RESULT = {
-  name: "The Moon",
-  nameKr: "달",
-  keywords: ["불안", "직관", "환상", "무의식"],
-  reading:
-    "눈앞의 길이 흐릿하게 보이는 날이에요. 모든 것을 당장 분명히 하려 하기보다, 마음속에서 조용히 들려오는 느낌을 믿어 보세요. 안개는 시간이 지나면 걷힙니다.",
-};
 
 type CardPlacement = {
   x: number;
@@ -87,35 +76,41 @@ const PLACEMENTS: Record<TablePhase, CardPlacement[]> = {
 
 type DrawScreenProps = {
   phase: DrawPhase;
+  result: DrawResult | null; // 결과 단계에서만 값이 있음
+  onSelect: () => void; // 부채꼴에서 카드 한 장을 골랐을 때
+  onRedraw: () => void;
 };
 
-function DrawScreen({ phase }: DrawScreenProps) {
+function DrawScreen({ phase, result, onSelect, onRedraw }: DrawScreenProps) {
+  // 카드를 고를 수 있는 건 부채꼴 단계뿐
+  const selectable = phase === "fanned";
+
   if (phase === "result") {
+    if (!result) return null;
+    const { card, reading } = result;
     return (
-      // 결과 상태
       <div className="draw-screen draw-screen--result">
         <Card
           faceUp
-          name={SAMPLE_RESULT.name}
+          name={card.name}
           className="draw-screen__result-card"
         />
 
         <section className="draw-screen__reading">
-          <h2 className="draw-screen__name">{SAMPLE_RESULT.nameKr}</h2>
+          <h2 className="draw-screen__name">{card.nameKr}</h2>
           <ul className="draw-screen__keywords">
-            {SAMPLE_RESULT.keywords.map((keyword) => (
+            {card.keywords.map((keyword) => (
               <li key={keyword}>{keyword}</li>
             ))}
           </ul>
-          <p className="draw-screen__text">{SAMPLE_RESULT.reading}</p>
+          <p className="draw-screen__text">{reading}</p>
         </section>
 
-        {/* 공유하기는 보조 버튼, 다시 뽑기가 주 버튼 */}
         <div className="draw-screen__actions">
           <GoldButton variant="subtle" className="draw-screen__action-button">
             공유하기
           </GoldButton>
-          <GoldButton className="draw-screen__action-button">
+          <GoldButton className="draw-screen__action-button" onClick={onRedraw}>
             다시 뽑기
           </GoldButton>
         </div>
@@ -130,9 +125,25 @@ function DrawScreen({ phase }: DrawScreenProps) {
       <div className="draw-screen__table">
         {PLACEMENTS[phase].map((placement, index) => (
           // 위치는 감싸개(slot)에, 카드 자체 transform은 비워 둠(나중에 GSAP이 카드를 직접 다룸)
+          // 고를 수 있을 때만 버튼 역할(키보드 Tab·Enter로도 선택 가능).
+          // 단계마다 요소 종류를 바꾸면 카드가 새로 만들어져 애니메이션이 끊기므로 div 그대로 두고 속성만 바꿈
           <div
             key={index}
             className="draw-screen__slot"
+            role={selectable ? "button" : undefined}
+            tabIndex={selectable ? 0 : undefined}
+            aria-label={selectable ? `${index + 1}번째 카드 고르기` : undefined}
+            onClick={selectable ? onSelect : undefined}
+            onKeyDown={
+              selectable
+                ? (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onSelect();
+                    }
+                  }
+                : undefined
+            }
             style={{
               left: `${placement.x}%`,
               top: `${placement.y}%`,

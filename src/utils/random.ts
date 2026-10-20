@@ -23,3 +23,8 @@ export function gaussianRandom(random: () => number): number {
   const v = random();
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(Math.PI * 2 * v);
 }
+
+/** 배열에서 하나를 무작위로 고름. 뽑기 결과처럼 매번 달라야 하는 곳에서 사용(Math.random) */
+export function pickRandom<T>(items: readonly T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}

@@ -36,6 +36,8 @@
   축이 위에 있어서 카드 아래쪽이 사용자 쪽으로 활짝 벌어짐(∪ 모양) 
 */
 .draw-screen--fanned .draw-screen__slot {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   transform-origin: 50% calc(var(--card-w) * 0.75 - var(--fan-radius));
 }
 

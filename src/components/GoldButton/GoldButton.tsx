@@ -6,11 +6,12 @@ type GoldButtonProps = {
   // primary: 테두리 빛이 회전하는 주 버튼, subtle: 빛 없이 금색 선만 있는 보조 버튼
   variant?: "primary" | "subtle";
   className?: string;
+  onClick?: () => void;
 };
 
-function GoldButton({ children, variant = "primary", className = "" }: GoldButtonProps) {
+function GoldButton({ children, variant = "primary", className = "", onClick }: GoldButtonProps) {
   return (
-    <button className={`gold-button gold-button--${variant} ${className}`} type="button">
+    <button className={`gold-button gold-button--${variant} ${className}`} type="button" onClick={onClick}>
       {children}
     </button>
   );

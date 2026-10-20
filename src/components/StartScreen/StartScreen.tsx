@@ -9,7 +9,11 @@ const SUBTITLE = "별이 고른 오늘의 카드";
 // 화면에 쌓아 보여줄 카드 장수(실제 22장과 무관한 연출용 숫자)
 const DECK_SIZE = 5;
 
-function StartScreen() {
+type StartScreenProps = {
+  onDraw: () => void;
+};
+
+function StartScreen({ onDraw }: StartScreenProps) {
   return (
     // 모바일 기준 레이아웃. 데스크톱에서는 CSS의 max-width로 가운데 세로 영역만 유지되고
     // 양옆은 배경(남색)만 넓어지는 방식으로 반응형 처리됨.
@@ -37,7 +41,9 @@ function StartScreen() {
         </div>
       </div>
 
-      <GoldButton className="start-screen__draw-button">카드 뽑기</GoldButton>
+      <GoldButton className="start-screen__draw-button" onClick={onDraw}>
+        카드 뽑기
+      </GoldButton>
     </div>
   );
 }
