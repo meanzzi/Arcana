@@ -4,3 +4,6 @@ dist-ssr
 *.local
 .DS_Store
 *.tsbuildinfo
+
+# 참고용 레퍼런스 이미지 (git 제외)
+reference/
