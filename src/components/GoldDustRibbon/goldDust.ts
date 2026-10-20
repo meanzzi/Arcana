@@ -81,6 +81,27 @@ const FLOW_PATH: ReadonlyArray<{ x: number; y: number }> = [
   { x: 0.35, y: 1.05 },
 ];
 
+/**
+  일렁임: 띠를 따라 물결이 천천히 지나가며 옆으로 출렁이고, 폭도 부드럽게 넓어졌다 좁아짐.
+  - WAVE_AMP: 옆으로 출렁이는 최대 거리(기준 영역 폭 대비). 0.012면 모바일 약 5px
+  - WAVE_COUNT: S자 전체에 걸린 물결 개수
+  - WAVE_PERIOD: 물결 하나가 지나가는 주기(초)
+  - SWELL_AMP / SWELL_PERIOD: 띠 폭이 넓어졌다 좁아지는 정도와 주기(초)
+*/
+const WAVE_AMP = 0.012;
+const WAVE_COUNT = 1.5;
+const WAVE_PERIOD = 9;
+const SWELL_AMP = 0.08;
+const SWELL_PERIOD = 13;
+
+/**
+  반짝임: 큰 입자만 각자 다른 박자로 밝아졌다 어두워짐.
+  TWINKLE_MIN: 가장 어두울 때 밝기 배율, TWINKLE_PERIOD_MIN~MAX: 한 번 깜빡이는 주기 범위(초)
+*/
+const TWINKLE_MIN = 0.35;
+const TWINKLE_PERIOD_MIN = 2.5;
+const TWINKLE_PERIOD_MAX = 5;
+
 /** true면 경로 중심선(하늘색 선)과 FLOW_PATH 점(빨간 점)을 겹쳐 그림. 경로 조정할 때만 켜기 */
 const DEBUG_PATH = false;
 
@@ -110,6 +131,9 @@ type DustParticle = {
   /** 큰 입자(빛번짐 있음) 여부 */
   large: boolean;
 };
+
+/** 매 프레임 바뀌는 움직임 값 (drawRibbon 참고) */
+export type RibbonMotion = { flow: number; time: number };
 
 /** 실제 px로 바꿀 때 기준이 되는 영역. S자 모양이 데스크톱에서 옆으로 늘어나지 않게 폭을 제한 */
 export type RibbonLayout = {
@@ -364,13 +388,25 @@ export function createGlowBand(layout: RibbonLayout, dpr: number): HTMLCanvasEle
 }
 
 /**
+  큰 입자의 반짝임 배율(TWINKLE_MIN~1).
+  위상·주기를 입자 번호로 정해서(황금비로 고르게 흩어짐) 입자마다 박자가 다름.
+  시드 랜덤을 더 뽑으면 기존 입자 배치가 바뀌므로 랜덤을 쓰지 않음
+*/
+function twinkle(index: number, time: number): number {
+  const spread = (index * 0.618034) % 1;
+  const period = TWINKLE_PERIOD_MIN + spread * (TWINKLE_PERIOD_MAX - TWINKLE_PERIOD_MIN);
+  const wave = 0.5 + 0.5 * Math.sin((time / period) * Math.PI * 2 + index * 2.399963);
+  return TWINKLE_MIN + (1 - TWINKLE_MIN) * wave;
+}
+
+/**
   띠 전체를 그린다. ① 중심선 광채 → ② 입자.
   매번 clearRect로 완전히 지우고 새로 그림(반투명으로 덮어 지우는 trail 효과는 쓰지 않음 → 꼬리 없음).
 
-  [애니메이션 단계]
-  - 매 프레임 이 함수를 다시 호출. 그 전에 각 입자의 t를 (t + 아주 작은 속도) % 1 로 갱신하면
-    곡선을 따라 느리게 흐르고, 끝에서 처음으로 돌아가도 endFade 덕분에 갑자기 나타나거나 사라지지 않음
-  - 모바일에서 프레임이 떨어지면 MIN_PARTICLES·AREA_PER_PARTICLE부터 조정
+  motion.flow(0~1): 모든 입자를 경로를 따라 이만큼 밀어서 그림. 매 프레임 조금씩 늘리면 S자를 따라 흐름.
+  motion.time(초): 일렁임 물결의 현재 시각.
+  끝(1)을 넘은 입자는 처음(0)으로 돌아가는데, endFade 덕분에 갑자기 나타나거나 사라져 보이지 않음.
+  모바일에서 프레임이 떨어지면 MIN_PARTICLES·AREA_PER_PARTICLE부터 조정
 */
 export function drawRibbon(
   ctx: CanvasRenderingContext2D,
@@ -379,6 +415,7 @@ export function drawRibbon(
   count: number,
   glow: HTMLCanvasElement,
   glowBand: HTMLCanvasElement,
+  motion: RibbonMotion = { flow: 0, time: 0 },
 ): void {
   const width = layout.originX * 2 + layout.boxWidth;
   ctx.clearRect(0, 0, width, layout.height);
@@ -391,22 +428,26 @@ export function drawRibbon(
   const drawCount = Math.min(count, particles.length);
   for (let i = 0; i < drawCount; i += 1) {
     const particle = particles[i];
+    const t = (particle.t + motion.flow) % 1;
 
     // 바깥(|z|가 클수록)으로 갈수록 최대 60%까지 어두워져, 가장자리가 부드럽게 사라짐
     const edgeFade = 1 - (Math.abs(particle.z) / MAX_SIGMA) * 0.6;
-    const alpha = particle.alpha * endFade(particle.t) * edgeFade;
+    let alpha = particle.alpha * endFade(t) * edgeFade;
     if (alpha <= 0.01) {
       continue;
     }
 
-    const { point, normal } = samplePath(particle.t, layout);
-    const distance = particle.z * flowSigma(particle.t, layout);
+    const { point, normal } = samplePath(t, layout);
+    // 물결은 t(경로 위치)와 시간에 따라 정해져서, 가까운 입자끼리 함께 출렁임 → 띠 전체가 천처럼 움직임
+    const wave = Math.sin(t * Math.PI * 2 * WAVE_COUNT - (motion.time / WAVE_PERIOD) * Math.PI * 2);
+    const swell = 1 + SWELL_AMP * Math.sin(t * Math.PI * 3 + (motion.time / SWELL_PERIOD) * Math.PI * 2);
+    const distance = particle.z * flowSigma(t, layout) * swell + wave * WAVE_AMP * layout.boxWidth;
     const x = point.x + normal.x * distance;
     const y = point.y + normal.y * distance;
 
     if (particle.large) {
+      alpha *= twinkle(i, motion.time);
       // 큰 입자만 빛번짐. 'lighter'로 더하되 alpha를 낮춰 겹쳐도 하얗게 타지 않게
-      // [애니메이션 단계] 큰 입자는 alpha에 sin(시간 + 입자별 위상)을 곱해 은은하게 깜빡이게
       const glowSize = particle.size * GLOW_SCALE;
       ctx.globalCompositeOperation = "lighter";
       ctx.globalAlpha = alpha * GLOW_ALPHA;

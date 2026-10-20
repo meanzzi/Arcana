@@ -31,8 +31,25 @@
   font-size: clamp(1.8rem, 8vw, 2.2rem);
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: var(--color-gold);
   white-space: nowrap;
+  /*
+    금빛 광택: 가운데만 밝은 그라데이션을 글자 모양으로 잘라 칠함.
+    글자보다 3배 넓어서 평소(위치 100%)에는 오른쪽 금색 부분만 보이고,
+    GSAP이 위치를 0%로 옮기면 밝은 부분이 글자 위를 왼쪽에서 오른쪽으로 지나감
+  */
+  color: var(--color-gold);
+  background: linear-gradient(
+      105deg,
+      var(--color-gold) 40%,
+      var(--color-champagne-light) 48%,
+      #fff4d6 50%,
+      var(--color-champagne-light) 52%,
+      var(--color-gold) 60%
+    )
+    100% 0 / 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .start-screen__subtitle {
@@ -82,10 +99,6 @@
   filter: blur(calc(var(--deck-w) * 0.17));
   opacity: 0.8;
   transform: translate(-50%, -50%);
-  /*
-    [애니메이션 단계] 카드 더미의 '숨쉬기(위아래 둥실)'와 박자를 맞춰
-    scale 1 ↔ 1.04, opacity 0.75 ↔ 0.85 정도로 아주 느리게 함께 호흡시킬 예정 (GSAP)
-  */
 }
 
 /*
@@ -109,11 +122,6 @@
   filter: blur(calc(var(--deck-w) * 0.1));
   opacity: 0.85;
   transform: translate(-50%, -50%);
-  /*
-    [애니메이션 단계] 더미가 위로 떠오를 때(숨쉬기 정점) 코어가 살짝 밝아지도록
-    opacity를 더미 움직임과 같은 타임라인에 묶을 예정.
-    카드 뽑기 버튼을 누르는 순간 코어가 한 번 확 밝아졌다가 사라지는 전환 연출도 여기서 시작
-  */
 }
 
 /*
