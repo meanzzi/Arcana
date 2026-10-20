@@ -1,0 +1,40 @@
+/*
+  시작 화면과 같은 반응형 전략: 모바일 세로 기둥(max-width)을 가운데 두고, 높이는 100dvh에 맞춤
+*/
+.draw-screen {
+  /*
+    카드 한 장의 폭. 10장이 흩어져야 하므로 시작 화면 더미보다 작게.
+    - 24vw: 좁은 휴대폰에서 폭 기준으로 줄어듦
+    - 100dvh / 7: 키 작은 화면에서 높이 기준으로 줄어듦
+    - 64px~110px 사이로 제한
+  */
+  --card-w: clamp(64px, min(24vw, calc(100dvh / 7)), 110px);
+
+  max-width: 480px;
+  height: 100vh;
+  height: 100dvh;
+  margin: 0 auto;
+  /* 바깥쪽 카드가 화면 끝에 붙지 않도록 카드 폭 절반 + 여유만큼 비움 */
+  padding: calc(var(--card-w) * 0.9) calc(var(--card-w) * 0.6);
+  box-sizing: border-box;
+  /* 기울어진 카드 모서리가 살짝 넘쳐도 스크롤이 생기지 않게 */
+  overflow: clip;
+}
+
+/* 카드를 흩어놓는 테이블 영역. 카드 위치(%)는 이 영역 기준 */
+.draw-screen__table {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* 위치·기울기는 DrawScreen.tsx에서 인라인으로 지정 */
+.draw-screen__slot {
+  position: absolute;
+  width: var(--card-w);
+}
+
+/* 카드 기본 폭(Card.css의 140px) 대신 슬롯 폭에 맞춤 */
+.draw-screen__slot .draw-screen__card {
+  width: 100%;
+}
