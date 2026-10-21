@@ -9,14 +9,29 @@ import "./ResultView.css";
 type ResultViewProps = {
   result: DrawResult;
   from: DOMRect | null;
+  dissolving: boolean;
   onResultEnd: () => void;
   onRedraw: () => void;
+  onDissolveEnd: () => void;
 };
 
-function ResultView({ result, from, onResultEnd, onRedraw }: ResultViewProps) {
+function ResultView({
+  result,
+  from,
+  dissolving,
+  onResultEnd,
+  onRedraw,
+  onDissolveEnd,
+}: ResultViewProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const { notice, share } = useShare();
-  const { tiltHandlers } = useResultAnimation({ rootRef, from, onResultEnd });
+  const { tiltHandlers } = useResultAnimation({
+    rootRef,
+    from,
+    dissolving,
+    onResultEnd,
+    onDissolveEnd,
+  });
   const { card, reading } = result;
 
   return (
@@ -25,10 +40,13 @@ function ResultView({ result, from, onResultEnd, onRedraw }: ResultViewProps) {
         faceUp
         name={card.name}
         image={card.image}
-        className="result-view__card"
+        className={`result-view__card ${dissolving ? "result-view__card--dissolving" : ""}`}
         {...tiltHandlers}
       >
         <span className="result-view__sheen" aria-hidden="true" />
+        {dissolving && (
+          <canvas className="result-view__dissolve" aria-hidden="true" />
+        )}
       </Card>
 
       <section className="result-view__reading">

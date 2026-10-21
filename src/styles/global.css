@@ -4,6 +4,15 @@
   padding: 0;
 }
 
+/* 스크롤은 되지만 막대는 보이지 않게 */
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   background: linear-gradient(
     160deg,

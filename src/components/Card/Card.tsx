@@ -43,9 +43,14 @@ type CardSideProps = {
   children?: ReactNode;
 };
 
+// 한 번 못 불러온 주소. 새로 만든 카드가 실패를 다시 기다리는 동안 투명하게 깜빡이지 않게 함
+const failedImages = new Set<string>();
+
 // 이미지 파일이 없거나 불러오지 못하면 회색 임시 카드로 대신함
 function CardSide({ side, src, label, children }: CardSideProps) {
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState(() =>
+    src ? failedImages.has(src) : false,
+  );
   const showImage = Boolean(src) && !failed;
 
   return (
@@ -58,7 +63,10 @@ function CardSide({ side, src, label, children }: CardSideProps) {
           src={src}
           alt={label ?? ""}
           draggable={false}
-          onError={() => setFailed(true)}
+          onError={() => {
+            failedImages.add(src ?? "");
+            setFailed(true);
+          }}
         />
       ) : (
         label && <span className="card__name">{label}</span>

@@ -232,27 +232,26 @@ export function useTableAnimation({
         return;
       }
 
-      const timeline = gsap.timeline({ onComplete: onWashEnd });
-      if (origin) {
-        const rect = table.getBoundingClientRect();
-        timeline.fromTo(
-          slots,
-          {
+      const rect = table.getBoundingClientRect();
+      // 시작 화면에서 오면 카드 더미 자리에서, 다시 뽑기면 테이블 가운데에서 흐리게 나타나며 흩어짐
+      const deck = origin
+        ? {
             left: `${((origin.centerX - rect.left) / rect.width) * 100}%`,
             top: `${((origin.centerY - rect.top) / rect.height) * 100}%`,
             rotation: 0,
             scale: origin.width / slots[0].offsetWidth,
-          },
-          {
-            ...scatter,
-            duration: SCATTER_DURATION,
-            ease: "power2.inOut",
-            stagger: { each: SCATTER_STAGGER, from: "end" },
-          },
-        );
-      } else {
-        timeline.set(slots, scatter);
-      }
+            autoAlpha: 1,
+          }
+        : { left: "50%", top: "50%", rotation: 0, scale: 1, autoAlpha: 0 };
+      const timeline = gsap
+        .timeline({ onComplete: onWashEnd })
+        .fromTo(slots, deck, {
+          ...scatter,
+          autoAlpha: 1,
+          duration: SCATTER_DURATION,
+          ease: "power2.inOut",
+          stagger: { each: SCATTER_STAGGER, from: "end" },
+        });
       addWashAndGather(timeline, slots, SCATTER_PLACEMENTS);
     },
     { scope: tableRef, dependencies: [phase, origin] },

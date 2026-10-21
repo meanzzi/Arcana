@@ -15,7 +15,7 @@ function preloadFronts() {
 
 export type Phase = "start" | DrawPhase;
 
-//화면 흐름: start → scattered(워싱) → fanned(부채꼴) → revealing(뒤집기) → result(결과) → 다시 뽑기
+//화면 흐름: start → scattered(워싱) → fanned(부채꼴) → revealing(뒤집기) → result(결과) → dissolving(다시 뽑기) → scattered
 export function useDrawFlow() {
   const [phase, setPhase] = useState<Phase>("start");
   const [result, setResult] = useState<DrawResult | null>(null);
@@ -42,6 +42,11 @@ export function useDrawFlow() {
   const redraw = () => {
     if (lockedRef.current || phase !== "result") return;
     lockedRef.current = true;
+    setPhase("dissolving");
+  };
+
+  const finishDissolve = () => {
+    if (phase !== "dissolving") return;
     window.scrollTo(0, 0);
     setResult(null);
     setOrigin(null);
@@ -79,5 +84,6 @@ export function useDrawFlow() {
     finishFan,
     finishReveal,
     finishResult,
+    finishDissolve,
   };
 }

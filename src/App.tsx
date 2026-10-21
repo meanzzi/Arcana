@@ -22,6 +22,7 @@ function App() {
           onRevealEnd={flow.finishReveal}
           onResultEnd={flow.finishResult}
           onRedraw={flow.redraw}
+          onDissolveEnd={flow.finishDissolve}
         />
       )}
     </>

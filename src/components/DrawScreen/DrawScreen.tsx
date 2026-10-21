@@ -14,9 +14,10 @@ type DrawScreenProps = {
   onRevealEnd: () => void;
   onResultEnd: () => void;
   onRedraw: () => void;
+  onDissolveEnd: () => void;
 };
 
-// 화면 2. 결과 단계 전에는 카드 테이블, 결과 단계에는 결과 화면을 보여줌
+// 화면 2. 결과 단계 전에는 카드 테이블, 결과·다시 뽑기 단계에는 결과 화면을 보여줌
 function DrawScreen({
   phase,
   result,
@@ -27,18 +28,21 @@ function DrawScreen({
   onRevealEnd,
   onResultEnd,
   onRedraw,
+  onDissolveEnd,
 }: DrawScreenProps) {
   // 뒤집기가 끝난 카드의 화면 위치. 결과 화면 카드가 이 자리에서 출발해 위로 올라감
   const [revealedRect, setRevealedRect] = useState<DOMRect | null>(null);
 
-  if (phase === "result") {
+  if (phase === "result" || phase === "dissolving") {
     if (!result) return null;
     return (
       <ResultView
         result={result}
         from={revealedRect}
         onResultEnd={onResultEnd}
+        dissolving={phase === "dissolving"}
         onRedraw={onRedraw}
+        onDissolveEnd={onDissolveEnd}
       />
     );
   }
