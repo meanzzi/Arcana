@@ -4,7 +4,7 @@
     "roman": "0",
     "name": "The Fool",
     "nameKr": "바보",
-    "image": "/images/cards/00-fool.png",
+    "image": "/images/cards/00-fool.webp",
     "keywords": ["새로운 시작", "자유", "모험", "순수"],
     "upright": [
       "아무것도 정해지지 않은 길이 당신 앞에 펼쳐집니다. 가벼운 마음으로 내딛는 첫걸음이 뜻밖의 세계로 이끌 것입니다.",
@@ -17,7 +17,7 @@
     "roman": "I",
     "name": "The Magician",
     "nameKr": "마법사",
-    "image": "/images/cards/01-magician.png",
+    "image": "/images/cards/01-magician.webp",
     "keywords": ["의지", "창조", "재능", "실행"],
     "upright": [
       "필요한 모든 도구가 이미 당신의 손 안에 있습니다. 마음먹은 것을 현실로 불러낼 힘이 오늘 깨어납니다.",
@@ -30,7 +30,7 @@
     "roman": "II",
     "name": "The High Priestess",
     "nameKr": "여사제",
-    "image": "/images/cards/02-priestess.png",
+    "image": "/images/cards/02-priestess.webp",
     "keywords": ["직관", "비밀", "지혜", "고요"],
     "upright": [
       "답은 소란스러운 바깥이 아닌 고요한 내면에 있습니다. 오늘은 말보다 침묵에 귀 기울이십시오.",
@@ -43,7 +43,7 @@
     "roman": "III",
     "name": "The Empress",
     "nameKr": "여황제",
-    "image": "/images/cards/03-empress.png",
+    "image": "/images/cards/03-empress.webp",
     "keywords": ["풍요", "돌봄", "아름다움", "결실"],
     "upright": [
       "정성으로 가꾼 씨앗이 조용히 열매를 맺어 갑니다. 풍요는 이미 당신 곁으로 다가오고 있습니다.",
@@ -56,7 +56,7 @@
     "roman": "IV",
     "name": "The Emperor",
     "nameKr": "황제",
-    "image": "/images/cards/04-emperor.png",
+    "image": "/images/cards/04-emperor.webp",
     "keywords": ["안정", "질서", "책임", "리더십"],
     "upright": [
       "흔들림 없는 기반 위에 당신의 성이 세워집니다. 원칙을 지키는 자에게 질서가 힘이 되어 줄 것입니다.",
@@ -69,7 +69,7 @@
     "roman": "V",
     "name": "The Hierophant",
     "nameKr": "교황",
-    "image": "/images/cards/05-hierophant.png",
+    "image": "/images/cards/05-hierophant.webp",
     "keywords": ["전통", "가르침", "신뢰", "조언"],
     "upright": [
       "오래된 지혜 속에 오늘의 답이 담겨 있습니다. 먼저 길을 걸어간 이의 조언에 귀를 열어 두십시오.",
@@ -82,7 +82,7 @@
     "roman": "VI",
     "name": "The Lovers",
     "nameKr": "연인",
-    "image": "/images/cards/06-lovers.png",
+    "image": "/images/cards/06-lovers.webp",
     "keywords": ["사랑", "조화", "선택", "인연"],
     "upright": [
       "두 마음이 하나로 이어지는 별자리가 떠오릅니다. 소중한 인연과의 조화가 당신을 빛나게 할 것입니다.",
@@ -95,7 +95,7 @@
     "roman": "VII",
     "name": "The Chariot",
     "nameKr": "전차",
-    "image": "/images/cards/07-chariot.png",
+    "image": "/images/cards/07-chariot.webp",
     "keywords": ["승리", "의지", "전진", "극복"],
     "upright": [
       "서로 다른 방향으로 끌던 힘을 하나로 다스릴 때 전차는 앞으로 나아갑니다. 오늘 당신의 의지가 승리를 부릅니다.",
@@ -108,7 +108,7 @@
     "roman": "VIII",
     "name": "Strength",
     "nameKr": "힘",
-    "image": "/images/cards/08-strength.png",
+    "image": "/images/cards/08-strength.webp",
     "keywords": ["용기", "인내", "부드러움", "내면의 힘"],
     "upright": [
       "진정한 힘은 거칠게 누르는 것이 아니라 부드럽게 다스리는 데 있습니다. 오늘은 온화함이 당신의 무기입니다.",
@@ -121,7 +121,7 @@
     "roman": "IX",
     "name": "The Hermit",
     "nameKr": "은둔자",
-    "image": "/images/cards/09-hermit.png",
+    "image": "/images/cards/09-hermit.webp",
     "keywords": ["성찰", "고독", "탐구", "지혜"],
     "upright": [
       "세상의 소음에서 한 걸음 물러설 때 등불이 더 밝게 빛납니다. 오늘은 홀로 생각을 정리하기 좋은 날입니다.",
@@ -134,7 +134,7 @@
     "roman": "X",
     "name": "Wheel of Fortune",
     "nameKr": "운명의 수레바퀴",
-    "image": "/images/cards/10-wheel.png",
+    "image": "/images/cards/10-wheel.webp",
     "keywords": ["전환점", "행운", "흐름", "기회"],
     "upright": [
       "운명의 수레바퀴가 당신을 향해 돌기 시작합니다. 예상치 못한 기회가 문을 두드릴 것입니다.",
@@ -147,7 +147,7 @@
     "roman": "XI",
     "name": "Justice",
     "nameKr": "정의",
-    "image": "/images/cards/11-justice.png",
+    "image": "/images/cards/11-justice.webp",
     "keywords": ["균형", "공정", "진실", "결정"],
     "upright": [
       "저울은 언제나 진실의 편으로 기웁니다. 정직하게 쌓아 온 것이 공정한 보답으로 돌아올 것입니다.",
@@ -160,7 +160,7 @@
     "roman": "XII",
     "name": "The Hanged Man",
     "nameKr": "매달린 사람",
-    "image": "/images/cards/12-hanged.png",
+    "image": "/images/cards/12-hanged.webp",
     "keywords": ["기다림", "새로운 관점", "내려놓음", "깨달음"],
     "upright": [
       "거꾸로 매달린 자만이 볼 수 있는 풍경이 있습니다. 오늘은 익숙한 시선을 뒤집어 보십시오.",
@@ -173,7 +173,7 @@
     "roman": "XIII",
     "name": "Death",
     "nameKr": "죽음",
-    "image": "/images/cards/13-death.png",
+    "image": "/images/cards/13-death.webp",
     "keywords": ["끝과 시작", "변화", "정리", "재탄생"],
     "upright": [
       "하나의 문이 닫혀야 새로운 문이 열립니다. 오늘 끝나는 것은 더 나은 시작을 위한 자리를 만들어 줍니다.",
@@ -186,7 +186,7 @@
     "roman": "XIV",
     "name": "Temperance",
     "nameKr": "절제",
-    "image": "/images/cards/14-temperance.png",
+    "image": "/images/cards/14-temperance.webp",
     "keywords": ["조화", "균형", "치유", "인내"],
     "upright": [
       "두 잔 사이를 흐르는 물처럼, 서로 다른 것이 어우러져 새로운 조화를 이룹니다. 오늘은 중용이 답입니다.",
@@ -199,7 +199,7 @@
     "roman": "XV",
     "name": "The Devil",
     "nameKr": "악마",
-    "image": "/images/cards/15-devil.png",
+    "image": "/images/cards/15-devil.webp",
     "keywords": ["유혹", "집착", "욕망", "속박"],
     "upright": [
       "당신을 묶은 사슬은 생각보다 느슨합니다. 스스로 벗어나겠다고 마음먹는 순간 자유가 시작됩니다.",
@@ -212,7 +212,7 @@
     "roman": "XVI",
     "name": "The Tower",
     "nameKr": "탑",
-    "image": "/images/cards/16-tower.png",
+    "image": "/images/cards/16-tower.webp",
     "keywords": ["급변", "해방", "깨달음", "재건"],
     "upright": [
       "예고 없는 번개가 낡은 탑을 무너뜨립니다. 흔들림 뒤에는 더 단단한 토대를 세울 기회가 남습니다.",
@@ -225,7 +225,7 @@
     "roman": "XVII",
     "name": "The Star",
     "nameKr": "별",
-    "image": "/images/cards/17-star.png",
+    "image": "/images/cards/17-star.webp",
     "keywords": ["희망", "치유", "영감", "평온"],
     "upright": [
       "어둠이 깊을수록 별은 더 밝게 빛납니다. 오늘 당신의 소망은 하늘에 닿아 있습니다.",
@@ -238,7 +238,7 @@
     "roman": "XVIII",
     "name": "The Moon",
     "nameKr": "달",
-    "image": "/images/cards/18-moon.png",
+    "image": "/images/cards/18-moon.webp",
     "keywords": ["직관", "불안", "환상", "무의식"],
     "upright": [
       "달빛 아래에서는 모든 것이 실제와 다르게 보입니다. 확신이 서지 않는다면 서둘러 결정하지 마십시오.",
@@ -251,7 +251,7 @@
     "roman": "XIX",
     "name": "The Sun",
     "nameKr": "태양",
-    "image": "/images/cards/19-sun.png",
+    "image": "/images/cards/19-sun.webp",
     "keywords": ["기쁨", "성공", "활력", "밝음"],
     "upright": [
       "찬란한 태양이 당신의 하루를 환히 비춥니다. 숨김없는 기쁨과 성공의 기운이 가득합니다.",
@@ -264,7 +264,7 @@
     "roman": "XX",
     "name": "Judgement",
     "nameKr": "심판",
-    "image": "/images/cards/20-judgement.png",
+    "image": "/images/cards/20-judgement.webp",
     "keywords": ["부활", "각성", "결단", "새로운 부름"],
     "upright": [
       "천사의 나팔 소리가 잠든 가능성을 깨웁니다. 오랫동안 미뤄 둔 일에 다시 생명이 깃듭니다.",
@@ -277,7 +277,7 @@
     "roman": "XXI",
     "name": "The World",
     "nameKr": "세계",
-    "image": "/images/cards/21-world.png",
+    "image": "/images/cards/21-world.webp",
     "keywords": ["완성", "성취", "통합", "여정의 끝"],
     "upright": [
       "하나의 여정이 아름다운 원을 그리며 완성됩니다. 당신이 걸어온 모든 길이 오늘 의미를 얻습니다.",

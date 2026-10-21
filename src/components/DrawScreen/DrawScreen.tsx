@@ -323,8 +323,8 @@ function DrawScreen({
 
         // 결과 화면 카드와 비슷한 크기까지 키워서, 다음에 위로 올라갈 때 크기가 크게 바뀌지 않게 함
         const revealWidth = Math.min(
-          tableRect.width * 0.5,
-          (tableRect.height * 0.6) / 1.5,
+          tableRect.width * 0.6,
+          (tableRect.height * 0.8) / 1.5,
         );
         const picked = {
           left: "50%",
@@ -495,7 +495,12 @@ function DrawScreen({
     const { card, reading } = result;
     return (
       <div className="draw-screen draw-screen--result" ref={screenRef}>
-        <Card faceUp name={card.name} className="draw-screen__result-card" />
+        <Card
+          faceUp
+          name={card.name}
+          image={card.image}
+          className="draw-screen__result-card"
+        />
 
         <section className="draw-screen__reading">
           <h2 className="draw-screen__name">{card.nameKr}</h2>
@@ -588,6 +593,7 @@ function DrawScreen({
             <Card
               className="draw-screen__card"
               name={index === selected ? result?.card.name : undefined}
+              image={index === selected ? result?.card.image : undefined}
             />
           </div>
         ))}

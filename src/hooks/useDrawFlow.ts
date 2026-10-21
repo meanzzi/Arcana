@@ -9,6 +9,13 @@ import { pickRandom } from "../utils/random";
 
 const CARDS: TarotCard[] = cardsData;
 
+// 뒤집는 순간 빈 앞면이 보이지 않게, 워싱이 도는 동안 22장 앞면을 미리 불러 둠
+function preloadFronts() {
+  CARDS.forEach((card) => {
+    new Image().src = card.image;
+  });
+}
+
 export type Phase = "start" | DrawPhase;
 
 //화면 흐름: start → scattered(워싱) → fanned(부채꼴) → revealing(뒤집기) → result(결과) → 다시 뽑기
@@ -22,6 +29,7 @@ export function useDrawFlow() {
   const draw = (deckOrigin: DeckOrigin) => {
     if (lockedRef.current || phase !== "start") return;
     lockedRef.current = true;
+    preloadFronts();
     setOrigin(deckOrigin);
     setPhase("scattered");
   };
