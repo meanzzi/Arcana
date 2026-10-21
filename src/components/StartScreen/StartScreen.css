@@ -28,7 +28,7 @@
 
 .start-screen__title {
   font-family: var(--font-title);
-  font-size: clamp(1.8rem, 8vw, 2.2rem);
+  font-size: clamp(2rem, 8.5vw, 2.6rem);
   font-weight: 700;
   letter-spacing: 0.05em;
   white-space: nowrap;
@@ -55,7 +55,7 @@
 .start-screen__subtitle {
   margin-top: 0.5em;
   font-family: var(--font-kr);
-  font-size: 1rem;
+  font-size: 1.15rem;
   color: var(--color-parchment);
 }
 
