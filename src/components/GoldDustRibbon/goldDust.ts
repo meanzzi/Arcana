@@ -186,13 +186,20 @@ const PATH: Segment[] = buildPath(FLOW_PATH);
 const BOX_ASPECT = 0.7;
 
 /** 곡선 하나의 길이(px)를 잘게 나눈 직선 길이의 합으로 근사 */
-function segmentLength(segment: Segment, boxWidth: number, height: number): number {
+function segmentLength(
+  segment: Segment,
+  boxWidth: number,
+  height: number,
+): number {
   const steps = 24;
   let length = 0;
   let prev = bezierPoint(segment, 0);
   for (let i = 1; i <= steps; i += 1) {
     const next = bezierPoint(segment, i / steps);
-    length += Math.hypot((next.x - prev.x) * boxWidth, (next.y - prev.y) * height);
+    length += Math.hypot(
+      (next.x - prev.x) * boxWidth,
+      (next.y - prev.y) * height,
+    );
     prev = next;
   }
   return length;
@@ -202,7 +209,9 @@ export function getLayout(width: number, height: number): RibbonLayout {
   const boxWidth = Math.min(width, height * BOX_ASPECT);
 
   // 화면 비율에 따라 곡선별 실제 길이가 달라지므로 레이아웃이 바뀔 때마다 다시 계산
-  const lengths = PATH.map((segment) => segmentLength(segment, boxWidth, height));
+  const lengths = PATH.map((segment) =>
+    segmentLength(segment, boxWidth, height),
+  );
   const total = lengths.reduce((sum, value) => sum + value, 0);
   let accumulated = 0;
   const segmentEnds = lengths.map((value) => {
@@ -215,15 +224,25 @@ export function getLayout(width: number, height: number): RibbonLayout {
 
 /** 화면 면적에 비례한 입자 수. 모바일은 적게, 데스크톱은 많게 */
 export function getParticleCount(layout: RibbonLayout): number {
-  const count = Math.round((layout.boxWidth * layout.height) / AREA_PER_PARTICLE);
+  const count = Math.round(
+    (layout.boxWidth * layout.height) / AREA_PER_PARTICLE,
+  );
   return Math.min(MAX_PARTICLES, Math.max(MIN_PARTICLES, count));
 }
 
 function bezierPoint([a, b, c, d]: Segment, u: number): Point {
   const m = 1 - u;
   return {
-    x: m * m * m * a.x + 3 * m * m * u * b.x + 3 * m * u * u * c.x + u * u * u * d.x,
-    y: m * m * m * a.y + 3 * m * m * u * b.y + 3 * m * u * u * c.y + u * u * u * d.y,
+    x:
+      m * m * m * a.x +
+      3 * m * m * u * b.x +
+      3 * m * u * u * c.x +
+      u * u * u * d.x,
+    y:
+      m * m * m * a.y +
+      3 * m * m * u * b.y +
+      3 * m * u * u * c.y +
+      u * u * u * d.y,
   };
 }
 
@@ -231,13 +250,22 @@ function bezierPoint([a, b, c, d]: Segment, u: number): Point {
 function bezierTangent([a, b, c, d]: Segment, u: number): Point {
   const m = 1 - u;
   return {
-    x: 3 * m * m * (b.x - a.x) + 6 * m * u * (c.x - b.x) + 3 * u * u * (d.x - c.x),
-    y: 3 * m * m * (b.y - a.y) + 6 * m * u * (c.y - b.y) + 3 * u * u * (d.y - c.y),
+    x:
+      3 * m * m * (b.x - a.x) +
+      6 * m * u * (c.x - b.x) +
+      3 * u * u * (d.x - c.x),
+    y:
+      3 * m * m * (b.y - a.y) +
+      6 * m * u * (c.y - b.y) +
+      3 * u * u * (d.y - c.y),
   };
 }
 
 /** 경로 위치 t(0~1)의 실제 px 좌표와, 그 지점에서 띠 바깥쪽을 향하는 단위 벡터(법선) */
-function samplePath(t: number, layout: RibbonLayout): { point: Point; normal: Point } {
+function samplePath(
+  t: number,
+  layout: RibbonLayout,
+): { point: Point; normal: Point } {
   // t(전체 길이 중 위치)가 속한 곡선을 찾고, 그 곡선 안에서의 위치 u(0~1)로 바꿈
   let index = 0;
   while (index < PATH.length - 1 && t > layout.segmentEnds[index]) {
@@ -257,7 +285,10 @@ function samplePath(t: number, layout: RibbonLayout): { point: Point; normal: Po
   const length = Math.hypot(tx, ty) || 1;
 
   return {
-    point: { x: layout.originX + p.x * layout.boxWidth, y: p.y * layout.height },
+    point: {
+      x: layout.originX + p.x * layout.boxWidth,
+      y: p.y * layout.height,
+    },
     normal: { x: -ty / length, y: tx / length },
   };
 }
@@ -333,7 +364,14 @@ export function createGlowSprite(): HTMLCanvasElement {
   }
 
   const center = size / 2;
-  const gradient = ctx.createRadialGradient(center, center, 0, center, center, center);
+  const gradient = ctx.createRadialGradient(
+    center,
+    center,
+    0,
+    center,
+    center,
+    center,
+  );
   gradient.addColorStop(0, "rgba(243, 223, 162, 1)");
   gradient.addColorStop(0.3, "rgba(232, 199, 122, 0.5)");
   gradient.addColorStop(1, "rgba(232, 199, 122, 0)");
@@ -356,7 +394,10 @@ const BAND_STEPS = 160;
 
   화면 크기가 바뀔 때만 다시 만들고, 애니메이션 단계에서도 매 프레임 drawImage로 깔기만 하면 됨
 */
-export function createGlowBand(layout: RibbonLayout, dpr: number): HTMLCanvasElement {
+export function createGlowBand(
+  layout: RibbonLayout,
+  dpr: number,
+): HTMLCanvasElement {
   const width = layout.originX * 2 + layout.boxWidth;
   const band = document.createElement("canvas");
   band.width = Math.round(width * dpr);
@@ -373,7 +414,14 @@ export function createGlowBand(layout: RibbonLayout, dpr: number): HTMLCanvasEle
     const { point } = samplePath(t, layout);
     const radius = flowSigma(t, layout) * BAND_RADIUS;
 
-    const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius);
+    const gradient = ctx.createRadialGradient(
+      point.x,
+      point.y,
+      0,
+      point.x,
+      point.y,
+      radius,
+    );
     gradient.addColorStop(0, `rgba(${BAND_COLOR}, 1)`);
     gradient.addColorStop(0.5, `rgba(${BAND_COLOR}, 0.4)`);
     gradient.addColorStop(1, `rgba(${BAND_COLOR}, 0)`);
@@ -394,8 +442,10 @@ export function createGlowBand(layout: RibbonLayout, dpr: number): HTMLCanvasEle
 */
 function twinkle(index: number, time: number): number {
   const spread = (index * 0.618034) % 1;
-  const period = TWINKLE_PERIOD_MIN + spread * (TWINKLE_PERIOD_MAX - TWINKLE_PERIOD_MIN);
-  const wave = 0.5 + 0.5 * Math.sin((time / period) * Math.PI * 2 + index * 2.399963);
+  const period =
+    TWINKLE_PERIOD_MIN + spread * (TWINKLE_PERIOD_MAX - TWINKLE_PERIOD_MIN);
+  const wave =
+    0.5 + 0.5 * Math.sin((time / period) * Math.PI * 2 + index * 2.399963);
   return TWINKLE_MIN + (1 - TWINKLE_MIN) * wave;
 }
 
@@ -439,9 +489,16 @@ export function drawRibbon(
 
     const { point, normal } = samplePath(t, layout);
     // 물결은 t(경로 위치)와 시간에 따라 정해져서, 가까운 입자끼리 함께 출렁임 → 띠 전체가 천처럼 움직임
-    const wave = Math.sin(t * Math.PI * 2 * WAVE_COUNT - (motion.time / WAVE_PERIOD) * Math.PI * 2);
-    const swell = 1 + SWELL_AMP * Math.sin(t * Math.PI * 3 + (motion.time / SWELL_PERIOD) * Math.PI * 2);
-    const distance = particle.z * flowSigma(t, layout) * swell + wave * WAVE_AMP * layout.boxWidth;
+    const wave = Math.sin(
+      t * Math.PI * 2 * WAVE_COUNT - (motion.time / WAVE_PERIOD) * Math.PI * 2,
+    );
+    const swell =
+      1 +
+      SWELL_AMP *
+        Math.sin(t * Math.PI * 3 + (motion.time / SWELL_PERIOD) * Math.PI * 2);
+    const distance =
+      particle.z * flowSigma(t, layout) * swell +
+      wave * WAVE_AMP * layout.boxWidth;
     const x = point.x + normal.x * distance;
     const y = point.y + normal.y * distance;
 
@@ -451,7 +508,13 @@ export function drawRibbon(
       const glowSize = particle.size * GLOW_SCALE;
       ctx.globalCompositeOperation = "lighter";
       ctx.globalAlpha = alpha * GLOW_ALPHA;
-      ctx.drawImage(glow, x - glowSize / 2, y - glowSize / 2, glowSize, glowSize);
+      ctx.drawImage(
+        glow,
+        x - glowSize / 2,
+        y - glowSize / 2,
+        glowSize,
+        glowSize,
+      );
     }
 
     // 입자 본체는 일반 합성(source-over): 촘촘한 중심부에서도 밝기가 누적되지 않아 하얗게 타지 않음
@@ -460,7 +523,12 @@ export function drawRibbon(
     ctx.fillStyle = particle.color;
     if (particle.size < 1.2) {
       // 아주 작은 가루는 원 대신 사각형으로 찍음(눈으로는 구분 안 되고 훨씬 빠름)
-      ctx.fillRect(x - particle.size / 2, y - particle.size / 2, particle.size, particle.size);
+      ctx.fillRect(
+        x - particle.size / 2,
+        y - particle.size / 2,
+        particle.size,
+        particle.size,
+      );
     } else {
       ctx.beginPath();
       ctx.arc(x, y, particle.size / 2, 0, Math.PI * 2);
@@ -478,7 +546,10 @@ export function drawRibbon(
 }
 
 /** [디버그] 경로 중심선과 FLOW_PATH 점을 그려 경로가 의도대로 지나가는지 확인 */
-function drawDebugPath(ctx: CanvasRenderingContext2D, layout: RibbonLayout): void {
+function drawDebugPath(
+  ctx: CanvasRenderingContext2D,
+  layout: RibbonLayout,
+): void {
   const steps = 300;
   ctx.strokeStyle = "#00e5ff";
   ctx.lineWidth = 1;
@@ -496,7 +567,13 @@ function drawDebugPath(ctx: CanvasRenderingContext2D, layout: RibbonLayout): voi
   ctx.fillStyle = "#ff3b3b";
   for (const p of FLOW_PATH) {
     ctx.beginPath();
-    ctx.arc(layout.originX + p.x * layout.boxWidth, p.y * layout.height, 3, 0, Math.PI * 2);
+    ctx.arc(
+      layout.originX + p.x * layout.boxWidth,
+      p.y * layout.height,
+      3,
+      0,
+      Math.PI * 2,
+    );
     ctx.fill();
   }
 }

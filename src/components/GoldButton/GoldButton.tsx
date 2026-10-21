@@ -9,9 +9,18 @@ type GoldButtonProps = {
   onClick?: () => void;
 };
 
-function GoldButton({ children, variant = "primary", className = "", onClick }: GoldButtonProps) {
+function GoldButton({
+  children,
+  variant = "primary",
+  className = "",
+  onClick,
+}: GoldButtonProps) {
   return (
-    <button className={`gold-button gold-button--${variant} ${className}`} type="button" onClick={onClick}>
+    <button
+      className={`gold-button gold-button--${variant} ${className}`}
+      type="button"
+      onClick={onClick}
+    >
       {children}
     </button>
   );

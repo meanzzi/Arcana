@@ -12,7 +12,9 @@ type CardProps = {
 // 나중에 실제 이미지를 연결할 때 이 안쪽만 바꾸면 되도록 분리해둠.
 function Card({ name, faceUp = false, className = "" }: CardProps) {
   return (
-    <div className={`card ${faceUp ? "card--face" : "card--back"} ${className}`}>
+    <div
+      className={`card ${faceUp ? "card--face" : "card--back"} ${className}`}
+    >
       {faceUp && name && <span className="card__name">{name}</span>}
     </div>
   );
