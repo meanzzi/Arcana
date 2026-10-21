@@ -1,24 +1,37 @@
-import { useState } from "react";
+import { useState, type HTMLAttributes, type ReactNode } from "react";
 import "./Card.css";
 
-// 뒷면은 22장 공통. 아직 파일이 없으면 회색 임시 뒷면이 보임
+// 뒷면
 const BACK_IMAGE = "/images/cards/back.webp";
 
 type CardProps = {
   // 이미지가 없을 때 임시 앞면에 보여줄 카드 이름
   name?: string;
   image?: string;
-  // true면 앞면이 보이게 놓음. 뒤집기 애니메이션은 GSAP이 .card의 rotationY를 180으로 돌림
+  // true면 앞면이 보이게 놓음.
   faceUp?: boolean;
   className?: string;
-};
+  // 앞면 위에 얹는 효과 레이어. 앞면 모서리 모양대로 잘림
+  children?: ReactNode;
+} & Omit<HTMLAttributes<HTMLDivElement>, "className" | "children">;
 
-function Card({ name, image, faceUp = false, className = "" }: CardProps) {
+function Card({
+  name,
+  image,
+  faceUp = false,
+  className = "",
+  children,
+  ...rest
+}: CardProps) {
   return (
-    <div className={`card ${faceUp ? "card--face-up" : ""} ${className}`}>
+    <div
+      className={`card ${faceUp ? "card--face-up" : ""} ${className}`}
+      {...rest}
+    >
       <CardSide side="back" src={BACK_IMAGE} />
-      {/* 이미지가 바뀌면 불러오기 실패 상태도 새로 시작하도록 key로 다시 만듦 */}
-      <CardSide key={image} side="front" src={image} label={name} />
+      <CardSide key={image} side="front" src={image} label={name}>
+        {children}
+      </CardSide>
     </div>
   );
 }
@@ -27,10 +40,11 @@ type CardSideProps = {
   side: "back" | "front";
   src?: string;
   label?: string;
+  children?: ReactNode;
 };
 
 // 이미지 파일이 없거나 불러오지 못하면 회색 임시 카드로 대신함
-function CardSide({ side, src, label }: CardSideProps) {
+function CardSide({ side, src, label, children }: CardSideProps) {
   const [failed, setFailed] = useState(false);
   const showImage = Boolean(src) && !failed;
 
@@ -49,6 +63,7 @@ function CardSide({ side, src, label }: CardSideProps) {
       ) : (
         label && <span className="card__name">{label}</span>
       )}
+      {children}
     </div>
   );
 }

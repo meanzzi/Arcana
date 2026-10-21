@@ -28,7 +28,6 @@ const GATHER_DURATION = 0.8;
 const FAN_SHIFT_DURATION = 0.5;
 const FAN_SWEEP_DURATION = 1.2;
 
-// 호버 때 카드가 튀어오르는 거리(카드 폭 대비)와 시간(초)
 const POP_DISTANCE = 0.18;
 const POP_DURATION = 0.25;
 
@@ -37,6 +36,9 @@ const FLIP_DURATION = 0.8;
 const FLIP_HOLD = 0.4;
 const RISE_DURATION = 0.8;
 const READING_DURATION = 0.6;
+
+const TILT_MAX = 10;
+const TILT_FOLLOW = 0.5;
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
@@ -243,16 +245,19 @@ function DrawScreen({
   const screenRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<number | null>(null);
-  // 뒤집기가 끝난 카드의 화면 위치. 결과 화면 카드가 이 자리에서 출발해 위로 올라감
+
   const revealedRectRef = useRef<DOMRect | null>(null);
-  // 펼치기가 끝나 고를 수 있을 때만 값이 있음
+
   const fanRef = useRef<FanGeometry | null>(null);
   const hoveredRef = useRef<number | null>(null);
+
+  const tiltRef = useRef<((x: number, y: number) => void) | null>(null);
 
   const { contextSafe } = useGSAP(
     () => {
       fanRef.current = null;
       hoveredRef.current = null;
+      tiltRef.current = null;
 
       const reduceMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
@@ -267,9 +272,36 @@ function DrawScreen({
           gsap.delayedCall(0, onResultEnd);
           return;
         }
+
+        // 금박 틸트
+        gsap.set(card, {
+          transformPerspective: card.offsetWidth * 3,
+          "--sheen-x": 50,
+          "--sheen-y": 50,
+          "--sheen-on": 0,
+        });
+        const follow = { duration: TILT_FOLLOW, ease: "power3.out" };
+        const rotateX = gsap.quickTo(card, "rotationX", follow);
+        const rotateY = gsap.quickTo(card, "rotationY", follow);
+        const sheenX = gsap.quickTo(card, "--sheen-x", follow);
+        const sheenY = gsap.quickTo(card, "--sheen-y", follow);
+        const sheenOn = gsap.quickTo(card, "--sheen-on", follow);
+        const tilt = (x: number, y: number) => {
+          rotateX(-y * TILT_MAX);
+          rotateY(x * TILT_MAX);
+          sheenX((x + 1) * 50);
+          sheenY((y + 1) * 50);
+          sheenOn(x === 0 && y === 0 ? 0 : 1);
+        };
+
         const to = card.getBoundingClientRect();
         gsap
-          .timeline({ onComplete: onResultEnd })
+          .timeline({
+            onComplete: () => {
+              tiltRef.current = tilt;
+              onResultEnd();
+            },
+          })
           .from(card, {
             x: from.left + from.width / 2 - (to.left + to.width / 2),
             y: from.top + from.height / 2 - (to.top + to.height / 2),
@@ -311,7 +343,7 @@ function DrawScreen({
           onRevealEnd();
         };
 
-        // 부채꼴 회전축은 카드 위쪽 먼 곳이라 그대로 키우면 카드가 밀려남. 보이는 자리는 그대로 두고 축만 가운데로 옮김
+        // 부채꼴로 카드 펼치기
         const tableRect = table.getBoundingClientRect();
         const slotRect = slot.getBoundingClientRect();
         gsap.set(slot, {
@@ -321,7 +353,7 @@ function DrawScreen({
           zIndex: 1,
         });
 
-        // 결과 화면 카드와 비슷한 크기까지 키워서, 다음에 위로 올라갈 때 크기가 크게 바뀌지 않게 함
+        // 결과 화면 카드 확대
         const revealWidth = Math.min(
           tableRect.width * 0.6,
           (tableRect.height * 0.8) / 1.5,
@@ -434,7 +466,7 @@ function DrawScreen({
       index
     ];
 
-  // 튀어오르기는 카드(.card)의 y로 해서, 기울어진 슬롯 안에서 카드가 자기 방향(부채꼴 바깥쪽)으로 움직임
+  // 카드 선택
   const hover = contextSafe((index: number | null) => {
     const previous = hoveredRef.current;
     if (previous === index) return;
@@ -460,7 +492,7 @@ function DrawScreen({
     }
   });
 
-  // 고를 수 있는 동안 한 번만 받음(마우스는 pointerup과 click이 둘 다 들어올 수 있음)
+  // 고를 수 있는 동안 한 번만 받음
   const select = (index: number) => {
     if (!fanRef.current) return;
     fanRef.current = null;
@@ -490,6 +522,20 @@ function DrawScreen({
     else hover(null);
   };
 
+  // 마우스는 올리기만 해도, 손가락은 카드 위를 끄는 동안만 기울어짐(터치는 누른 동안에만 move가 옴)
+  const handleTiltMove = (event: React.PointerEvent<HTMLElement>) => {
+    const tilt = tiltRef.current;
+    if (!tilt) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const clamp = gsap.utils.clamp(-1, 1);
+    tilt(
+      clamp(((event.clientX - rect.left) / rect.width) * 2 - 1),
+      clamp(((event.clientY - rect.top) / rect.height) * 2 - 1),
+    );
+  };
+
+  const resetTilt = () => tiltRef.current?.(0, 0);
+
   if (phase === "result") {
     if (!result) return null;
     const { card, reading } = result;
@@ -500,7 +546,12 @@ function DrawScreen({
           name={card.name}
           image={card.image}
           className="draw-screen__result-card"
-        />
+          onPointerMove={handleTiltMove}
+          onPointerLeave={resetTilt}
+          onPointerCancel={resetTilt}
+        >
+          <span className="draw-screen__sheen" aria-hidden="true" />
+        </Card>
 
         <section className="draw-screen__reading">
           <h2 className="draw-screen__name">{card.nameKr}</h2>
@@ -523,7 +574,6 @@ function DrawScreen({
           <GoldButton className="draw-screen__action-button" onClick={onRedraw}>
             다시 뽑기
           </GoldButton>
-          {/* 복사 결과 안내. aria-live라 화면 낭독기도 읽어 줌 */}
           <p className="draw-screen__notice" aria-live="polite">
             {notice}
           </p>
@@ -533,8 +583,7 @@ function DrawScreen({
   }
 
   return (
-    // 화면 2(뽑기+결과). 단계가 바뀌어도 같은 카드 22장(같은 요소)의 위치만 바뀌는 구조라,
-    // 애니메이션 단계에서 흩어진 상태 → 부채꼴로 자연스럽게 이어 움직일 수 있음
+    // 화면 2
     <div className={`draw-screen draw-screen--${phase}`} ref={screenRef}>
       <div
         className="draw-screen__table"
@@ -546,16 +595,12 @@ function DrawScreen({
         onPointerCancel={() => hover(null)}
       >
         {Array.from({ length: CARD_COUNT }, (_, index) => (
-          // 위치는 감싸개(slot)에(GSAP이 지정), 카드 자체 transform은 비워 둠(호버·뒤집기용)
-          // 고를 수 있을 때만 버튼 역할(키보드 Tab·Enter로도 선택 가능).
-          // 단계마다 요소 종류를 바꾸면 카드가 새로 만들어져 애니메이션이 끊기므로 div 그대로 두고 속성만 바꿈
           <div
             key={index}
             className="draw-screen__slot"
             role={selectable ? "button" : undefined}
             tabIndex={selectable ? 0 : undefined}
             aria-label={selectable ? `${index + 1}번째 카드 고르기` : undefined}
-            // 포인터 선택은 테이블이 맡고, 여기서는 화면 낭독기가 보내는 클릭(detail 0)만 받음
             onClick={
               selectable
                 ? (event) => {
@@ -563,7 +608,6 @@ function DrawScreen({
                   }
                 : undefined
             }
-            // 키보드(Tab)로 옮길 때만 호버. 마우스 클릭으로 생기는 포커스는 포인터 계산에 맡김
             onFocus={
               selectable
                 ? (event) => {
