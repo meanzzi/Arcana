@@ -4,7 +4,8 @@ import StartScreen from "./components/StartScreen/StartScreen";
 import { useDrawFlow } from "./hooks/useDrawFlow";
 
 function App() {
-  const { phase, result, draw, select, redraw } = useDrawFlow();
+  const { phase, result, origin, draw, select, redraw, finishWash, finishFan } =
+    useDrawFlow();
 
   return (
     <>
@@ -15,6 +16,9 @@ function App() {
         <DrawScreen
           phase={phase}
           result={result}
+          origin={origin}
+          onWashEnd={finishWash}
+          onFanEnd={finishFan}
           onSelect={select}
           onRedraw={redraw}
         />

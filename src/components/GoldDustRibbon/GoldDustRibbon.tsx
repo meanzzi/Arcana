@@ -40,7 +40,9 @@ function GoldDustRibbon() {
     const glow = createGlowSprite();
     let frameId = 0;
 
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
 
     // 리사이즈 때만 바뀌는 값. 매 프레임 그리기에서 재사용 (첫 리사이즈 전에는 그리지 않음)
     let layout = getLayout(canvas.clientWidth, canvas.clientHeight);
@@ -58,6 +60,13 @@ function GoldDustRibbon() {
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+
+      // 시작 화면이 사라지며 캔버스가 DOM에서 빠지면 크기가 0으로 잡힘(정리 함수가 몇 프레임 늦게 돌 때).
+      // 크기 0인 캔버스는 drawImage가 에러를 내므로 광채 레이어를 비워 그리기를 건너뜀
+      if (width === 0 || height === 0) {
+        glowBand = null;
+        return;
+      }
 
       // 실제 픽셀 수는 dpr배로 키우고, 좌표계는 CSS px 그대로 쓰도록 배율을 걸어둠 → 레티나에서도 선명
       canvas.width = Math.round(width * dpr);
