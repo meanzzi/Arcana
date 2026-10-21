@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Card from "../Card/Card";
@@ -18,24 +18,29 @@ const FAN_SPREAD = 100;
 
 const SCATTER_DURATION = 1.2;
 const SCATTER_STAGGER = 0.03;
-
-// 워싱: 휘젓는 횟수, 한 번 휘젓는 시간(초), 한 번에 다 같이 도는 각도(라디안)와 카드별 흔들림
 const WASH_ROUNDS = 3;
 const WASH_STEP = 0.8;
 const WASH_SWIRL = 0.5;
 const WASH_SWIRL_JITTER = 0.35;
-// 카드마다 출발을 0~이 값(초)만큼 늦춰서 22장이 한꺼번에 움직이는 기계적인 느낌을 줄임
 const WASH_DELAY_JITTER = 0.2;
 
 const GATHER_DURATION = 0.8;
-
-// 펼치기: 모인 더미를 왼쪽 끝으로 옮기는 시간, 왼쪽 끝에서 오른쪽 끝까지 쓸어 펼치는 시간(초)
 const FAN_SHIFT_DURATION = 0.5;
 const FAN_SWEEP_DURATION = 1.2;
 
+// 호버 때 카드가 튀어오르는 거리(카드 폭 대비)와 시간(초)
+const POP_DISTANCE = 0.18;
+const POP_DURATION = 0.25;
+
+const PICK_DURATION = 0.9;
+const FLIP_DURATION = 0.8;
+const FLIP_HOLD = 0.4;
+const RISE_DURATION = 0.8;
+const READING_DURATION = 0.6;
+
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
-export type DrawPhase = "scattered" | "fanned" | "result";
+export type DrawPhase = "scattered" | "fanned" | "revealing" | "result";
 
 export type DeckOrigin = {
   centerX: number;
@@ -43,7 +48,7 @@ export type DeckOrigin = {
   width: number;
 };
 
-type TablePhase = Exclude<DrawPhase, "result">;
+type TablePhase = Exclude<DrawPhase, "revealing" | "result">;
 
 type CardPlacement = {
   x: number;
@@ -65,7 +70,6 @@ function createScatter(): CardPlacement[] {
       x: 50 + (Math.cos(angle) * radius) / 2,
       y: 50 + (Math.sin(angle) * radius) / 2,
       // 황금각을 계속 더해서 뒤쪽 카드는 수천 도가 되므로, 같은 방향의 -180~180도로 바꿈.
-      // 정지 화면에선 똑같아 보이지만, 안 바꾸면 더미에서 흩어질 때 카드가 몇 바퀴씩 돌아 버림
       rotation: gsap.utils.wrap(
         -180,
         180,
@@ -75,13 +79,6 @@ function createScatter(): CardPlacement[] {
   });
 }
 
-/*
-  부채꼴 상태: 모든 카드가 같은 자리에 겹쳐 있고 각도만 다름.
-  회전 중심(transform-origin)을 카드 위쪽 한 점으로 옮겨 두어서(CSS 참고),
-  각도만 바꿔도 위 한 점을 축으로 좌우 대칭으로 펼쳐짐.
-  축이 위에 있으면 +각도가 카드를 왼쪽으로 보내므로, 왼쪽 카드(앞 순서)부터 +50도 → -50도로 줌.
-  DOM 순서상 뒤 카드가 위에 겹치므로 오른쪽 카드가 왼쪽 카드 위에 올라감
-*/
 function createFan(): CardPlacement[] {
   const step = FAN_SPREAD / (CARD_COUNT - 1);
   return Array.from({ length: CARD_COUNT }, (_, index) => ({
@@ -96,15 +93,6 @@ const PLACEMENTS: Record<TablePhase, CardPlacement[]> = {
   fanned: createFan(),
 };
 
-/*
-  워싱 → 모으기를 타임라인 뒤에 이어 붙임.
-  - 워싱: 카드마다 가운데 기준 각도·거리를 들고 있다가, 한 번 휘저을 때마다 모두 같은 방향으로
-    WASH_SWIRL만큼 돌고(전체가 한 방향으로 도는 흐름) 거리·기울기는 무작위로 바뀜.
-    기울기는 접선 방향을 따르되, 직전 기울기에서 가까운 쪽으로만 돌게 해서 카드가 빙글 돌지 않게 함
-  - 모으기: 가운데로 모이며 기울기는 가장 가까운 360도 배수로 맞춤(보이는 모양은 0도와 같음).
-    끝나면 0도로 바꿔 두어서 부채꼴이 0도부터 자연스럽게 펼쳐짐
-  매번 달라야 하는 움직임이라 시드 랜덤이 아니라 Math.random 사용
-*/
 function addWashAndGather(
   timeline: gsap.core.Timeline,
   slots: HTMLElement[],
@@ -179,13 +167,63 @@ function toTweenVars(placements: CardPlacement[]) {
   };
 }
 
+// 펼쳐진 부채꼴의 모양(테이블 기준 px). 포인터 아래 카드를 계산할 때 씀
+type FanGeometry = {
+  pivotX: number;
+  pivotY: number;
+  radius: number;
+  cardWidth: number;
+  cardHeight: number;
+};
+
+// 회전축 위치를 CSS(transform-origin)에서 읽어 와서 JS에 같은 값을 따로 두지 않음
+function measureFan(slot: HTMLElement): FanGeometry {
+  const [originX, originY] = getComputedStyle(slot)
+    .transformOrigin.split(" ")
+    .map(parseFloat);
+  const cardWidth = slot.offsetWidth;
+  const cardHeight = slot.offsetHeight;
+  return {
+    pivotX: slot.offsetLeft + originX - cardWidth / 2,
+    pivotY: slot.offsetTop + originY - cardHeight / 2,
+    radius: cardHeight / 2 - originY,
+    cardWidth,
+    cardHeight,
+  };
+}
+
+/*
+  포인터 아래에 보이는 맨 위 카드 번호. 카드 요소의 마우스 이벤트 대신 각도로 계산해서,
+  튀어오른 카드가 옆 카드를 덮어도 결과가 바뀌지 않음(경계에서 두 카드가 번갈아 튀지 않음).
+  오른쪽 카드가 위에 겹치므로, 포인터 각도를 덮는 카드 중 가장 오른쪽(번호가 큰) 카드를 고름
+*/
+function cardAt(fan: FanGeometry, x: number, y: number): number | null {
+  const dx = x - fan.pivotX;
+  const dy = y - fan.pivotY;
+  const distance = Math.hypot(dx, dy);
+  if (Math.abs(distance - fan.radius) > fan.cardHeight / 2) return null;
+
+  const angle = (Math.atan2(-dx, dy) * 180) / Math.PI;
+  const halfWidth = (Math.atan(fan.cardWidth / 2 / distance) * 180) / Math.PI;
+  const step = FAN_SPREAD / (CARD_COUNT - 1);
+  const index = Math.min(
+    CARD_COUNT - 1,
+    Math.floor((FAN_SPREAD / 2 - angle + halfWidth) / step),
+  );
+  if (index < 0) return null;
+  const cardAngle = FAN_SPREAD / 2 - index * step;
+  return Math.abs(angle - cardAngle) <= halfWidth ? index : null;
+}
+
 type DrawScreenProps = {
   phase: DrawPhase;
-  result: DrawResult | null; // 결과 단계에서만 값이 있음
-  origin: DeckOrigin | null; // 시작 화면에서 넘어왔을 때만 값이 있음(다시 뽑기는 null)
-  onWashEnd: () => void; // 워싱·모으기가 끝났을 때(부채꼴 단계로 넘김)
-  onFanEnd: () => void; // 펼치기가 끝났을 때(카드를 고를 수 있게 잠금 해제)
-  onSelect: () => void; // 부채꼴에서 카드 한 장을 골랐을 때
+  result: DrawResult | null;
+  origin: DeckOrigin | null;
+  onWashEnd: () => void;
+  onFanEnd: () => void;
+  onSelect: () => void;
+  onRevealEnd: () => void;
+  onResultEnd: () => void;
   onRedraw: () => void;
 };
 
@@ -196,24 +234,63 @@ function DrawScreen({
   onWashEnd,
   onFanEnd,
   onSelect,
+  onRevealEnd,
+  onResultEnd,
   onRedraw,
 }: DrawScreenProps) {
-  // 카드를 고를 수 있는 건 부채꼴 단계뿐
   const selectable = phase === "fanned";
   const { notice, share } = useShare();
   const screenRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState<number | null>(null);
+  // 뒤집기가 끝난 카드의 화면 위치. 결과 화면 카드가 이 자리에서 출발해 위로 올라감
+  const revealedRectRef = useRef<DOMRect | null>(null);
+  // 펼치기가 끝나 고를 수 있을 때만 값이 있음
+  const fanRef = useRef<FanGeometry | null>(null);
+  const hoveredRef = useRef<number | null>(null);
 
-  /*
-    카드 위치·기울기는 GSAP이 혼자 맡음(인라인 style로 같이 주면 React가 다시 그릴 때 GSAP 값을 덮어씀).
-    left/top은 테이블 기준 %라 화면 크기가 바뀌어도 배치가 따라감.
-    - 흩어진 단계: (시작 화면에서 왔다면) 더미 자리에서 흩어짐 → 워싱 → 가운데로 모으기 → onWashEnd
-    - 부채꼴 단계: 모인 더미를 왼쪽 끝으로 옮긴 뒤 오른쪽으로 좌르륵 펼침 → onFanEnd
-    부채꼴의 회전축(transform-origin)은 부채꼴 단계 CSS 클래스가 바꾸는데, 그 순간 카드는 모여서
-    0도라 축이 바뀌어도 모양이 그대로임
-  */
-  useGSAP(
+  const { contextSafe } = useGSAP(
     () => {
+      fanRef.current = null;
+      hoveredRef.current = null;
+
+      const reduceMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+
+      if (phase === "result") {
+        const card = screenRef.current?.querySelector<HTMLElement>(
+          ".draw-screen__result-card",
+        );
+        const from = revealedRectRef.current;
+        if (!card || !from || reduceMotion) {
+          gsap.delayedCall(0, onResultEnd);
+          return;
+        }
+        const to = card.getBoundingClientRect();
+        gsap
+          .timeline({ onComplete: onResultEnd })
+          .from(card, {
+            x: from.left + from.width / 2 - (to.left + to.width / 2),
+            y: from.top + from.height / 2 - (to.top + to.height / 2),
+            scale: from.width / to.width,
+            duration: RISE_DURATION,
+            ease: "power2.inOut",
+          })
+          .from(
+            [".draw-screen__reading", ".draw-screen__actions"],
+            {
+              autoAlpha: 0,
+              y: 16,
+              duration: READING_DURATION,
+              ease: "power2.out",
+              stagger: 0.15,
+            },
+            "-=0.2",
+          );
+        return;
+      }
+
       const table = tableRef.current;
       if (!table) return;
       const slots = gsap.utils.toArray<HTMLElement>(
@@ -221,35 +298,86 @@ function DrawScreen({
         table,
       );
 
-      // CSS의 translate(-50%, -50%)에 해당. 슬롯 가운데가 left/top 지점에 오게 함
       gsap.set(slots, { xPercent: -50, yPercent: -50 });
 
-      // '동작 줄이기' 사용자에게는 움직임 없이 배치만 바꾸고 바로 다음 단계로.
-      // 화면을 그리는 도중에 상태를 바꾸지 않도록 delayedCall로 한 박자 뒤에 알림
-      const reduceMotion = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
+      if (phase === "revealing") {
+        if (selected === null) return;
+        const slot = slots[selected];
+        const card = slot.querySelector<HTMLElement>(".card");
+        if (!card) return;
+        const others = slots.filter((_, index) => index !== selected);
+        const finish = () => {
+          revealedRectRef.current = card.getBoundingClientRect();
+          onRevealEnd();
+        };
+
+        // 부채꼴 회전축은 카드 위쪽 먼 곳이라 그대로 키우면 카드가 밀려남. 보이는 자리는 그대로 두고 축만 가운데로 옮김
+        const tableRect = table.getBoundingClientRect();
+        const slotRect = slot.getBoundingClientRect();
+        gsap.set(slot, {
+          transformOrigin: "50% 50%",
+          left: `${((slotRect.left + slotRect.width / 2 - tableRect.left) / tableRect.width) * 100}%`,
+          top: `${((slotRect.top + slotRect.height / 2 - tableRect.top) / tableRect.height) * 100}%`,
+          zIndex: 1,
+        });
+
+        // 결과 화면 카드와 비슷한 크기까지 키워서, 다음에 위로 올라갈 때 크기가 크게 바뀌지 않게 함
+        const revealWidth = Math.min(
+          tableRect.width * 0.5,
+          (tableRect.height * 0.6) / 1.5,
+        );
+        const picked = {
+          left: "50%",
+          top: "50%",
+          rotation: 0,
+          scale: revealWidth / slot.offsetWidth,
+        };
+        gsap.set(card, { transformPerspective: card.offsetWidth * 4 });
+
+        if (reduceMotion) {
+          gsap.set(others, { autoAlpha: 0 });
+          gsap.set(slot, picked);
+          gsap.set(card, { rotationY: 180 });
+          gsap.delayedCall(0, finish);
+          return;
+        }
+        gsap
+          .timeline({ onComplete: finish })
+          .to(others, { autoAlpha: 0, duration: 0.6, ease: "power1.out" })
+          .to(
+            slot,
+            { ...picked, duration: PICK_DURATION, ease: "power2.inOut" },
+            0,
+          )
+          .to(card, { y: 0, duration: PICK_DURATION, ease: "power2.inOut" }, 0)
+          .to(card, {
+            rotationY: 180,
+            duration: FLIP_DURATION,
+            ease: "power2.inOut",
+          })
+          .to({}, { duration: FLIP_HOLD });
+        return;
+      }
 
       if (phase === "fanned") {
         const fan = toTweenVars(PLACEMENTS.fanned);
+        const ready = () => {
+          fanRef.current = measureFan(slots[0]);
+          onFanEnd();
+        };
         if (reduceMotion) {
           gsap.set(slots, fan);
-          gsap.delayedCall(0, onFanEnd);
+          gsap.delayedCall(0, ready);
           return;
         }
-        /*
-          실제 리더처럼 한쪽으로 좌르륵 펼침: '손' 각도 하나만 움직이고 카드는 그 손을 따라감.
-          ① 모인 더미를 통째로 부채꼴 왼쪽 끝으로 옮김
-          ② 손이 오른쪽 끝까지 쓸고 지나가며, 각 카드는 자기 자리에 닿으면 거기 남음
-             (자리 각도와 손 각도 중 덜 간 쪽 = 큰 값). 맨 위 카드(오른쪽 끝)가 끝까지 손에 붙어 감
-        */
+
         const angles = PLACEMENTS.fanned.map((placement) => placement.rotation);
         const setRotations = slots.map((slot) =>
           gsap.quickSetter(slot, "rotation", "deg"),
         );
         const hand = { angle: 0 };
         gsap
-          .timeline({ onComplete: onFanEnd })
+          .timeline({ onComplete: ready })
           .to(hand, {
             angle: angles[0],
             duration: FAN_SHIFT_DURATION,
@@ -277,7 +405,6 @@ function DrawScreen({
 
       const timeline = gsap.timeline({ onComplete: onWashEnd });
       if (origin) {
-        // 22장을 더미 자리·크기로 겹쳐 놓고 출발. 위쪽 카드(DOM 뒤쪽)부터 떠남
         const rect = table.getBoundingClientRect();
         timeline.fromTo(
           slots,
@@ -285,26 +412,83 @@ function DrawScreen({
             left: `${((origin.centerX - rect.left) / rect.width) * 100}%`,
             top: `${((origin.centerY - rect.top) / rect.height) * 100}%`,
             rotation: 0,
-            // 시작 화면 더미와 뽑기 화면 카드의 크기가 달라서 더미 크기로 맞춰 출발
             scale: origin.width / slots[0].offsetWidth,
           },
           {
             ...scatter,
             duration: SCATTER_DURATION,
-            // 출발도 천천히 하도록 inOut(power3.out은 처음에 너무 확 튀어 나감)
             ease: "power2.inOut",
             stagger: { each: SCATTER_STAGGER, from: "end" },
           },
         );
       } else {
-        // 다시 뽑기: 출발할 더미가 없으므로 흩어진 배치에서 바로 워싱 시작
         timeline.set(slots, scatter);
       }
       addWashAndGather(timeline, slots, PLACEMENTS.scattered);
     },
-    // onWashEnd·onFanEnd는 렌더링마다 새로 만들어지는 함수라 넣지 않음(넣으면 다시 그릴 때마다 애니메이션이 처음부터 재시작)
     { scope: screenRef, dependencies: [phase, origin] },
   );
+
+  const slotAt = (index: number) =>
+    tableRef.current?.querySelectorAll<HTMLElement>(".draw-screen__slot")[
+      index
+    ];
+
+  // 튀어오르기는 카드(.card)의 y로 해서, 기울어진 슬롯 안에서 카드가 자기 방향(부채꼴 바깥쪽)으로 움직임
+  const hover = contextSafe((index: number | null) => {
+    const previous = hoveredRef.current;
+    if (previous === index) return;
+    hoveredRef.current = index;
+
+    const previousSlot = previous === null ? undefined : slotAt(previous);
+    if (previousSlot) {
+      gsap.set(previousSlot, { zIndex: 0 });
+      gsap.to(previousSlot.firstElementChild, {
+        y: 0,
+        duration: POP_DURATION,
+        ease: "power2.out",
+      });
+    }
+    const slot = index === null ? undefined : slotAt(index);
+    if (slot && fanRef.current) {
+      gsap.set(slot, { zIndex: 1 });
+      gsap.to(slot.firstElementChild, {
+        y: fanRef.current.cardWidth * POP_DISTANCE,
+        duration: POP_DURATION,
+        ease: "power2.out",
+      });
+    }
+  });
+
+  // 고를 수 있는 동안 한 번만 받음(마우스는 pointerup과 click이 둘 다 들어올 수 있음)
+  const select = (index: number) => {
+    if (!fanRef.current) return;
+    fanRef.current = null;
+    // 손가락을 뗀 뒤 들어오는 pointerleave가 뒤집힐 카드의 호버를 되돌리지 않게 비움
+    hoveredRef.current = null;
+    setSelected(index);
+    onSelect();
+  };
+
+  const cardUnderPointer = (event: React.PointerEvent<HTMLElement>) => {
+    const table = tableRef.current;
+    const fan = fanRef.current;
+    if (!table || !fan) return null;
+    const rect = table.getBoundingClientRect();
+    return cardAt(fan, event.clientX - rect.left, event.clientY - rect.top);
+  };
+
+  // 마우스는 올리면 튀고 누르면 선택, 손가락은 문지르는 동안 튀고 떼면 선택
+  const handlePointerMove = (event: React.PointerEvent<HTMLElement>) => {
+    if (fanRef.current) hover(cardUnderPointer(event));
+  };
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const index = cardUnderPointer(event);
+    if (index !== null) select(index);
+    else hover(null);
+  };
 
   if (phase === "result") {
     if (!result) return null;
@@ -347,7 +531,15 @@ function DrawScreen({
     // 화면 2(뽑기+결과). 단계가 바뀌어도 같은 카드 22장(같은 요소)의 위치만 바뀌는 구조라,
     // 애니메이션 단계에서 흩어진 상태 → 부채꼴로 자연스럽게 이어 움직일 수 있음
     <div className={`draw-screen draw-screen--${phase}`} ref={screenRef}>
-      <div className="draw-screen__table" ref={tableRef}>
+      <div
+        className="draw-screen__table"
+        ref={tableRef}
+        onPointerDown={handlePointerMove}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={() => hover(null)}
+        onPointerCancel={() => hover(null)}
+      >
         {Array.from({ length: CARD_COUNT }, (_, index) => (
           // 위치는 감싸개(slot)에(GSAP이 지정), 카드 자체 transform은 비워 둠(호버·뒤집기용)
           // 고를 수 있을 때만 버튼 역할(키보드 Tab·Enter로도 선택 가능).
@@ -358,19 +550,45 @@ function DrawScreen({
             role={selectable ? "button" : undefined}
             tabIndex={selectable ? 0 : undefined}
             aria-label={selectable ? `${index + 1}번째 카드 고르기` : undefined}
-            onClick={selectable ? onSelect : undefined}
+            // 포인터 선택은 테이블이 맡고, 여기서는 화면 낭독기가 보내는 클릭(detail 0)만 받음
+            onClick={
+              selectable
+                ? (event) => {
+                    if (event.detail === 0) select(index);
+                  }
+                : undefined
+            }
+            // 키보드(Tab)로 옮길 때만 호버. 마우스 클릭으로 생기는 포커스는 포인터 계산에 맡김
+            onFocus={
+              selectable
+                ? (event) => {
+                    if (event.currentTarget.matches(":focus-visible"))
+                      hover(index);
+                  }
+                : undefined
+            }
+            onBlur={
+              selectable
+                ? () => {
+                    if (hoveredRef.current === index) hover(null);
+                  }
+                : undefined
+            }
             onKeyDown={
               selectable
                 ? (event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      onSelect();
+                      select(index);
                     }
                   }
                 : undefined
             }
           >
-            <Card className="draw-screen__card" />
+            <Card
+              className="draw-screen__card"
+              name={index === selected ? result?.card.name : undefined}
+            />
           </div>
         ))}
       </div>

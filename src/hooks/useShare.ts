@@ -1,15 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { DrawResult } from "../types/card";
 
-// 안내 문구가 떠 있는 시간(ms)
 const NOTICE_DURATION = 2000;
 
-/*
-  결과 링크 공유.
-  1) 휴대폰 기본 공유창(navigator.share)이 있으면 그걸 띄움
-  2) 없으면(대부분의 데스크톱 브라우저) 공유 문구 + 링크를 클립보드에 복사하고 안내 문구를 띄움
-  백엔드가 없어서 링크는 결과 페이지가 아니라 앱 주소. 어떤 카드가 나왔는지는 함께 보내는 문구에 담음
-*/
+// 결과 링크 공유.
 export function useShare() {
   const [notice, setNotice] = useState<string | null>(null);
   // 공유창이 떠 있는 동안 다시 누르면 navigator.share가 에러를 내므로 연타를 막음
@@ -45,7 +39,6 @@ export function useShare() {
     }
 
     try {
-      // 클립보드는 https나 localhost에서만 쓸 수 있음(휴대폰에서 http://192.168... 로 열면 실패)
       await navigator.clipboard.writeText(`${text}\n${url}`);
       setNotice("링크를 복사했어요");
     } catch {

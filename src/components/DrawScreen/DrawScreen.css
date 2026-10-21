@@ -1,47 +1,45 @@
-/*
-  반응형 전략
-  - 시작 화면과 달리 가운데 세로 기둥(max-width)을 두지 않고 화면 전체를 테이블로 씀.
-    카드만 있는 화면이라, 데스크톱에서 넓은 화면을 쓰지 않으면 카드가 너무 작아짐
-  - 높이는 시작 화면처럼 100dvh에 딱 맞춰 스크롤 없이 한눈에 보이게 함
-*/
 .draw-screen {
   --card-w: clamp(56px, min(17vw, 20dvh), 180px);
-  /* 부채꼴에서 카드 중심부터 회전축까지 거리. 클수록 부채가 완만하게 넓어짐 */
   --fan-radius: calc(var(--card-w) * 2.3);
 
   height: 100vh;
   height: 100dvh;
-  /* 흩어진 바깥쪽 카드가 화면 끝에 붙지 않도록 카드 크기만큼 비움 */
   padding: calc(var(--card-w) * 0.9) calc(var(--card-w) * 0.6);
   box-sizing: border-box;
-  /* 기울어진 카드 모서리가 살짝 넘쳐도 스크롤이 생기지 않게 */
   overflow: clip;
 }
 
-/* 카드를 흩어놓는 테이블 영역. 카드 위치(%)는 이 영역 기준 */
 .draw-screen__table {
   position: relative;
   width: 100%;
   height: 100%;
 }
 
-/* 위치·기울기는 DrawScreen.tsx에서 인라인으로 지정 */
 .draw-screen__slot {
   position: absolute;
   width: var(--card-w);
 }
 
-/*
-  부채꼴: 회전축을 카드 중심(높이 1.5배의 절반 = 0.75)에서 --fan-radius만큼 위로 옮김.
-  축이 위에 있어서 카드 아래쪽이 사용자 쪽으로 활짝 벌어짐(∪ 모양) 
-*/
 .draw-screen--fanned .draw-screen__slot {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* 모바일에서 카드 위를 문지를 때 화면이 스크롤되지 않게 */
+.draw-screen--fanned .draw-screen__table {
+  touch-action: none;
+}
+
+.draw-screen__slot:focus-visible {
+  outline: none;
+}
+
+/* 뒤집기 단계로 넘어가는 순간 회전축이 바뀌면 부채꼴 카드가 튀므로 두 단계에 같은 축을 씀 */
+.draw-screen--fanned .draw-screen__slot,
+.draw-screen--revealing .draw-screen__slot {
   transform-origin: 50% calc(var(--card-w) * 0.75 - var(--fan-radius));
 }
 
-/* 카드 기본 폭(Card.css의 140px) 대신 슬롯 폭에 맞춤 */
 .draw-screen__slot .draw-screen__card {
   width: 100%;
 }
@@ -98,13 +96,11 @@
 }
 
 .draw-screen__text {
-  /* 한 줄이 너무 길면 읽기 힘들어서 글자 수 기준으로 폭 제한 */
   max-width: 26em;
   margin-top: 8px;
   font-size: 1rem;
   line-height: 1.8;
   color: var(--color-parchment);
-  /* 한글이 단어 중간에서 끊기지 않게 */
   word-break: keep-all;
 }
 
@@ -116,12 +112,10 @@
   gap: 12px;
 }
 
-/* 두 버튼을 나란히 둬도 좁은 휴대폰(360px)에서 넘치지 않게 기본 170px보다 줄임 */
 .draw-screen__action-button.gold-button {
   width: 140px;
 }
 
-/* 버튼 위에 잠깐 떠오르는 안내 문구. 자리를 차지하지 않게 absolute로 띄움 */
 .draw-screen__notice {
   position: absolute;
   bottom: calc(100% + 12px);

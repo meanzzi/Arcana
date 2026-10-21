@@ -1,16 +1,24 @@
 .card {
+  position: relative;
   aspect-ratio: 2 / 3;
   width: 140px;
+  transform-style: preserve-3d;
+}
+
+.card__side {
+  position: absolute;
+  inset: 0;
   border-radius: 8px;
-  border: 1px solid var(--color-gold);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* 뒷면: 뒷면 디자인이 나오기 전까지 쓰는 회색 임시 패턴 */
-.card--back {
+.card__side--back {
   border: 2px solid var(--color-champagne);
   background-color: #4a4a52;
   background-image: repeating-linear-gradient(
@@ -22,9 +30,20 @@
   );
 }
 
-.card--face {
+/* 앞면은 미리 뒤집어 두어서, 카드를 Y축으로 180도 돌리면 앞면이 보임 */
+.card__side--front {
+  border: 1px solid var(--color-gold);
   background-color: #5c5c66;
   padding: 8px;
+  transform: rotateY(180deg);
+}
+
+.card--face-up .card__side--back {
+  transform: rotateY(180deg);
+}
+
+.card--face-up .card__side--front {
+  transform: none;
 }
 
 .card__name {

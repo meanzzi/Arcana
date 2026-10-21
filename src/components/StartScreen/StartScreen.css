@@ -3,7 +3,6 @@
 
   position: relative;
   max-width: 480px;
-  /* dvh 미지원 브라우저용 대비값을 먼저 두고 dvh로 덮어씀 */
   height: 100vh;
   height: 100dvh;
   margin: 0 auto;
@@ -32,11 +31,6 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   white-space: nowrap;
-  /*
-    금빛 광택: 가운데만 밝은 그라데이션을 글자 모양으로 잘라 칠함.
-    글자보다 3배 넓어서 평소(위치 100%)에는 오른쪽 금색 부분만 보이고,
-    GSAP이 위치를 0%로 옮기면 밝은 부분이 글자 위를 왼쪽에서 오른쪽으로 지나감
-  */
   color: var(--color-gold);
   background: linear-gradient(
       105deg,
@@ -78,11 +72,6 @@
   justify-content: center;
 }
 
-/*
-  오라 ① 넓은 후광: 화면 가운데를 은은하게 밝히는 바깥 빛.
-  카드에 붙은 진한 빛은 ②(aura-core)가 맡으므로, 여기서는 중심도 너무 진하지 않게 두고 넓게 퍼뜨림.
-  카드 더미에는 호버 효과를 두지 않음(버튼과 헷갈리지 않도록 '누를 수 있는 것'은 버튼 하나로)
-*/
 .start-screen__aura {
   position: absolute;
   top: 50%;
@@ -101,11 +90,6 @@
   transform: translate(-50%, -50%);
 }
 
-/*
-  오라 ② 안쪽 코어: 카드 더미 바로 뒤에 몰린 진한 빛.
-  카드가 세로로 긴 2:3 비율이라 원이 아니라 세로 타원으로 만들어, 카드 실루엣을 감싸듯 빛나게 함.
-  크기는 더미에 좌우로 기운 카드 여유분을 더한 정도
-*/
 .start-screen__aura-core {
   position: absolute;
   top: 50%;
@@ -124,10 +108,6 @@
   transform: translate(-50%, -50%);
 }
 
-/*
-  오라 안쪽, 카드 뒤에 겹쳐지는 얇은 금색 원 두 겹.
-  원 안쪽에는 은은한 금빛 광원을 깔아, 원이 빈 테두리가 아니라 빛을 품은 것처럼 보이게 함
-*/
 .start-screen__rings {
   position: absolute;
   top: 50%;
@@ -153,12 +133,6 @@
   border: 1px solid rgba(201, 162, 74, 0.3);
 }
 
-/*
-  오라 ③ 카드 더미 halo: 따뜻한 금빛을 더미 전체 뒤에 한 번만 깐다.
-  카드마다 그림자를 주면 5장이 겹치는 곳만 빛이 진해져 얼룩이 생기므로, 카드 크기와 같은
-  더미 감싸개에 box-shadow를 걸어 더미 전체를 감싸게 함.
-  .card가 아니라 감싸개에 거는 이유: 나중에 GSAP이 .card의 transform을 직접 다루기 때문
-*/
 .start-screen__deck {
   position: relative;
   width: var(--deck-w);
@@ -167,12 +141,6 @@
   border-radius: 8px;
   box-shadow: 0 0 calc(var(--deck-w) * 0.29) calc(var(--deck-w) * 0.06)
     rgba(232, 199, 122, 0.45);
-  /*
-    [애니메이션 단계] 대기 상태 숨쉬기(위아래 둥실)는 GSAP으로 이 요소(더미 전체)에 걸면 됨.
-    개별 .card의 transform은 섞기·펼치기용으로 비워 둘 것.
-    box-shadow는 애니메이션하면 매 프레임 다시 그려야 해서 무거우므로, 발광 세기 변화는
-    ①②의 opacity로 표현하는 원칙을 유지
-  */
 }
 
 .start-screen__deck .start-screen__deck-card {

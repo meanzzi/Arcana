@@ -3,7 +3,7 @@ import "./Card.css";
 type CardProps = {
   // 앞면일 때 보여줄 카드 이름. 실제 이미지로 교체되면 제거될 임시 텍스트
   name?: string;
-  // true면 앞면, false(기본값)면 뒷면
+  // true면 앞면이 보이게 놓음. 뒤집기 애니메이션은 GSAP이 .card의 rotationY를 180으로 돌림
   faceUp?: boolean;
   className?: string;
 };
@@ -12,10 +12,11 @@ type CardProps = {
 // 나중에 실제 이미지를 연결할 때 이 안쪽만 바꾸면 되도록 분리해둠.
 function Card({ name, faceUp = false, className = "" }: CardProps) {
   return (
-    <div
-      className={`card ${faceUp ? "card--face" : "card--back"} ${className}`}
-    >
-      {faceUp && name && <span className="card__name">{name}</span>}
+    <div className={`card ${faceUp ? "card--face-up" : ""} ${className}`}>
+      <div className="card__side card__side--back" />
+      <div className="card__side card__side--front">
+        {name && <span className="card__name">{name}</span>}
+      </div>
     </div>
   );
 }

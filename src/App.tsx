@@ -4,23 +4,24 @@ import StartScreen from "./components/StartScreen/StartScreen";
 import { useDrawFlow } from "./hooks/useDrawFlow";
 
 function App() {
-  const { phase, result, origin, draw, select, redraw, finishWash, finishFan } =
-    useDrawFlow();
+  const flow = useDrawFlow();
 
   return (
     <>
       <StarField />
-      {phase === "start" ? (
-        <StartScreen onDraw={draw} />
+      {flow.phase === "start" ? (
+        <StartScreen onDraw={flow.draw} />
       ) : (
         <DrawScreen
-          phase={phase}
-          result={result}
-          origin={origin}
-          onWashEnd={finishWash}
-          onFanEnd={finishFan}
-          onSelect={select}
-          onRedraw={redraw}
+          phase={flow.phase}
+          result={flow.result}
+          origin={flow.origin}
+          onWashEnd={flow.finishWash}
+          onFanEnd={flow.finishFan}
+          onSelect={flow.select}
+          onRevealEnd={flow.finishReveal}
+          onResultEnd={flow.finishResult}
+          onRedraw={flow.redraw}
         />
       )}
     </>
