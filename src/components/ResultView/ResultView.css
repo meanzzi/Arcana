@@ -1,50 +1,4 @@
-.draw-screen {
-  --card-w: clamp(56px, min(17vw, 20dvh), 180px);
-  --fan-radius: calc(var(--card-w) * 2.3);
-
-  height: 100vh;
-  height: 100dvh;
-  padding: calc(var(--card-w) * 0.9) calc(var(--card-w) * 0.6);
-  box-sizing: border-box;
-  overflow: clip;
-}
-
-.draw-screen__table {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.draw-screen__slot {
-  position: absolute;
-  width: var(--card-w);
-}
-
-.draw-screen--fanned .draw-screen__slot {
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* 모바일에서 카드 위를 문지를 때 화면이 스크롤되지 않게 */
-.draw-screen--fanned .draw-screen__table {
-  touch-action: none;
-}
-
-.draw-screen__slot:focus-visible {
-  outline: none;
-}
-
-/* 뒤집기 단계로 넘어가는 순간 회전축이 바뀌면 부채꼴 카드가 튀므로 두 단계에 같은 축을 씀 */
-.draw-screen--fanned .draw-screen__slot,
-.draw-screen--revealing .draw-screen__slot {
-  transform-origin: 50% calc(var(--card-w) * 0.75 - var(--fan-radius));
-}
-
-.draw-screen__slot .draw-screen__card {
-  width: 100%;
-}
-
-.draw-screen--result {
+.result-view {
   max-width: 480px;
   height: auto;
   min-height: 100vh;
@@ -58,12 +12,12 @@
   gap: clamp(20px, 4dvh, 36px);
 }
 
-.draw-screen__result-card.card {
+.result-view__card.card {
   width: clamp(160px, min(70vw, 60dvh), 420px);
   flex-shrink: 0;
 }
 
-.draw-screen__reading {
+.result-view__reading {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -71,7 +25,7 @@
   text-align: center;
 }
 
-.draw-screen__name {
+.result-view__name {
   font-family: var(--font-kr);
   font-size: 1.6rem;
   font-weight: 700;
@@ -79,7 +33,7 @@
   letter-spacing: 0.08em;
 }
 
-.draw-screen__keywords {
+.result-view__keywords {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -89,13 +43,13 @@
   letter-spacing: 0.05em;
 }
 
-.draw-screen__keywords li + li::before {
+.result-view__keywords li + li::before {
   content: "·";
   margin: 0 0.6em;
   color: rgba(201, 162, 74, 0.6);
 }
 
-.draw-screen__text {
+.result-view__text {
   max-width: 26em;
   margin-top: 8px;
   font-size: 1rem;
@@ -104,7 +58,7 @@
   word-break: keep-all;
 }
 
-.draw-screen__actions {
+.result-view__actions {
   position: relative;
   margin-top: auto;
   flex-shrink: 0;
@@ -112,11 +66,11 @@
   gap: 12px;
 }
 
-.draw-screen__action-button.gold-button {
+.result-view__action-button.gold-button {
   width: 140px;
 }
 
-.draw-screen__notice {
+.result-view__notice {
   position: absolute;
   bottom: calc(100% + 12px);
   left: 50%;
@@ -127,11 +81,11 @@
   pointer-events: none;
 }
 
-.draw-screen__result-card {
+.result-view__card {
   touch-action: pan-y;
 }
 
-.draw-screen__sheen {
+.result-view__sheen {
   position: absolute;
   inset: 0;
   pointer-events: none;

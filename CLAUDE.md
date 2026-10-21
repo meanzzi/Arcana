@@ -54,7 +54,7 @@ tarot/
 ├── scripts/             ← optimizeCards.mjs (원본 → WebP 변환)
 ├── src/
 │   ├── main.tsx, App.tsx
-│   ├── components/      ← Card, StartScreen, DrawScreen 등 (퍼블리싱 단계부터)
+│   ├── components/      ← Card, StartScreen, DrawScreen(CardTable·ResultView 전환) 등
 │   ├── assets/           ← 장식용 SVG·이미지 (모서리 장식, 리본, 별자리)
 │   ├── data/             ← cards.json (기능 단계부터)
 │   ├── types/            ← 카드 데이터 타입 등 (기능 단계부터)
@@ -87,5 +87,5 @@ tarot/
 - 커밋 전에 커밋 메시지를 보여주고 확인을 받는다
 - 커밋 메시지 형식: `타입: 한글 설명` (타입은 영어, 설명은 한글)
   - **제목 한 줄로 간결하게.** 변경 목록 같은 본문은 붙이지 않는다
-  - 타입: `feat`(기능/화면 추가), `fix`(버그 수정), `style`(스타일만 변경), `chore`(설정 등 잡일), `docs`(문서)
+  - 타입: `feat`(기능/화면 추가), `fix`(버그 수정), `style`(스타일만 변경), `chore`(설정 등 잡일), `docs`(문서), `refactor`(동작은 그대로 두고 코드 구조만 정리)
   - 예: `feat: 시작 화면 퍼블리싱`, `fix: 부채꼴 각도 계산 오류 수정`

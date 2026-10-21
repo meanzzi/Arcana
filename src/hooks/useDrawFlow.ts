@@ -1,8 +1,5 @@
 import { useRef, useState } from "react";
-import type {
-  DeckOrigin,
-  DrawPhase,
-} from "../components/DrawScreen/DrawScreen";
+import type { DeckOrigin, DrawPhase } from "../types/draw";
 import cardsData from "../data/cards.json";
 import type { DrawResult, TarotCard } from "../types/card";
 import { pickRandom } from "../utils/random";

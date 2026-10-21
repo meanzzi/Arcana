@@ -32,6 +32,7 @@
 
 - 카드 위치·기울기는 GSAP만 다룸 (인라인 style과 섞으면 React가 덮어씀)
 - 슬롯은 `left`/`top`(테이블 기준 %)과 `rotation`으로 배치, 카드(`.card`) transform은 호버·뒤집기용
+- 뽑기 화면 구조: `DrawScreen`이 단계에 따라 `CardTable`(22장) / `ResultView`(결과)를 바꿔 보여줌. 애니메이션은 `useTableAnimation`·`useFanHover`·`useResultAnimation`, 배치 계산은 `utils/cardLayout.ts`
 - 시작 화면은 퇴장 후 더미 위치(`DeckOrigin`)를 넘기고, 22장이 그 자리에서 출발
 - 흩어진 배치 각도는 -180~180도로 맞춤 (안 하면 카드가 몇 바퀴씩 돎)
 - 단계 전환은 애니메이션 완료 신호로: `onWashEnd`, `onFanEnd`, `onRevealEnd`, `onResultEnd`

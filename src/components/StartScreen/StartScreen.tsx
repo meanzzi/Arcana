@@ -4,7 +4,7 @@ import { useGSAP } from "@gsap/react";
 import Card from "../Card/Card";
 import GoldButton from "../GoldButton/GoldButton";
 import GoldDustRibbon from "../GoldDustRibbon/GoldDustRibbon";
-import type { DeckOrigin } from "../DrawScreen/DrawScreen";
+import type { DeckOrigin } from "../../types/draw";
 import "./StartScreen.css";
 
 const SUBTITLE = "별이 고른 오늘의 카드";
