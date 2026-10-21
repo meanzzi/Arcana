@@ -6,3 +6,64 @@
   z-index: -1;
   pointer-events: none;
 }
+
+.star-field__sparkle {
+  position: fixed;
+  z-index: -1;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  pointer-events: none;
+  opacity: 0.15;
+  scale: 0.7;
+  animation: star-sparkle ease-in-out infinite;
+}
+
+/* 가운데가 오목한 4각 별 */
+.star-field__sparkle::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  clip-path: polygon(
+    50% 0,
+    58% 42%,
+    100% 50%,
+    58% 58%,
+    50% 100%,
+    42% 58%,
+    0 50%,
+    42% 42%
+  );
+}
+
+.star-field__sparkle::after {
+  content: "";
+  position: absolute;
+  inset: -60%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.3) 0%,
+    transparent 55%
+  );
+}
+
+@keyframes star-sparkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    scale: 0.7;
+  }
+  50% {
+    opacity: 0.9;
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-field__sparkle {
+    animation: none;
+    opacity: 0.6;
+    scale: 1;
+  }
+}

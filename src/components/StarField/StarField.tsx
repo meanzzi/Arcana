@@ -20,6 +20,14 @@ const STAR_COLORS = ["#FFFFFF", "#F3DFA2"];
 const SEED = 21;
 const MAX_DPR = 2;
 
+// 4각 반짝임. 카드를 가리지 않게 화면 가장자리 쪽에 두고, 박자가 겹치지 않게 시간·지연을 서로 다르게
+const SPARKLES = [
+  { x: 14, y: 16, size: 14, duration: 5.5, delay: 0 },
+  { x: 84, y: 10, size: 10, duration: 6.5, delay: 2.2 },
+  { x: 90, y: 62, size: 12, duration: 7, delay: 4.1 },
+  { x: 8, y: 80, size: 9, duration: 6, delay: 1.3 },
+];
+
 function StarField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -88,7 +96,25 @@ function StarField() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="star-field" aria-hidden="true" />;
+  return (
+    <>
+      <canvas ref={canvasRef} className="star-field" aria-hidden="true" />
+      {SPARKLES.map(({ x, y, size, duration, delay }) => (
+        <span
+          key={`${x}-${y}`}
+          className="star-field__sparkle"
+          aria-hidden="true"
+          style={{
+            left: `${x}%`,
+            top: `${y}%`,
+            width: size,
+            animationDuration: `${duration}s`,
+            animationDelay: `${delay}s`,
+          }}
+        />
+      ))}
+    </>
+  );
 }
 
 export default StarField;
