@@ -17,6 +17,8 @@
 
 .card-table__slot {
   position: absolute;
+  left: 50%;
+  top: 50%;
   width: var(--card-w);
 }
 

@@ -24,17 +24,19 @@
 - 모바일 금박 틸트(옆으로 끌기): 실제 휴대폰에서 확인 필요
 - 디졸브 셰이더: 모바일에서 끊기지 않는지 확인 필요
 - 시작 때 `카드 뽑기` 누르면 한 번 깜빡임: 실패 이미지 기억으로 수정함, 사라졌는지 확인 필요
-- 이미지 용량: 모바일에서 워싱이 끊기면 테이블용 작은 뒷면(420px) 검토
+- 워싱 렉: transform으로 바꿈, 아이폰에서 확인 필요. 그래도 끊기면 테이블용 작은 뒷면·그림자 줄이기 검토
+- 고른 카드가 커질 때 뒷면이 잠깐 픽셀처럼 깨져 보임(Chrome, 원래 있던 현상). 확인 필요
 
 ## 구현하며 정한 것
 
 - 카드 위치·기울기는 GSAP만 다룸 (인라인 style과 섞으면 React가 덮어씀)
-- 슬롯은 `left`/`top`(테이블 기준 %)과 `rotation`으로 배치, 카드(`.card`) transform은 호버·뒤집기용
+- 슬롯은 CSS로 테이블 가운데(`left`/`top` 50%)에 두고 GSAP `x`/`y`(px)와 `rotation`으로 배치 (left/top 애니메이션은 모바일에서 렉). 카드(`.card`) transform은 호버·뒤집기용
 - 뽑기 화면 구조: `DrawScreen`이 단계에 따라 `CardTable`(22장) / `ResultView`(결과)를 바꿔 보여줌. 애니메이션은 `useTableAnimation`·`useFanHover`·`useResultAnimation`, 배치 계산은 `utils/cardLayout.ts`
 - 시작 화면은 퇴장 후 더미 위치(`DeckOrigin`)를 넘기고, 22장이 그 자리에서 출발
 - 흩어진 배치 각도는 -180~180도로 맞춤 (안 하면 카드가 몇 바퀴씩 돎)
 - 단계 전환은 애니메이션 완료 신호로: `onWashEnd`, `onFanEnd`, `onRevealEnd`, `onResultEnd`
 - 흐름: start → scattered → fanned → revealing → result → dissolving → scattered. 뽑기·고르기·다시 뽑기 때 잠그고 각 애니메이션 끝에 풂
+- `useGSAP`은 첫 단계 애니메이션을 다음 단계로 넘어갈 때 되돌림(배포 빌드에서만, 개발은 StrictMode가 가림). 그래서 각 단계는 시작 위치를 직접 정함
 - 펼치기는 더미를 왼쪽 끝으로 옮긴 뒤 '손' 각도 하나로 오른쪽까지 쓸어 펼침
 - 호버는 카드별 이벤트 대신 회전축 기준 각도로 포인터 아래 카드를 계산 (경계 떨림 방지)
 - 호버 때 카드는 부채꼴 바깥쪽(사용자 쪽)으로 튀어나옴

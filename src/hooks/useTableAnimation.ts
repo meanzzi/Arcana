@@ -29,11 +29,22 @@ const PICK_DURATION = 0.9;
 const FLIP_DURATION = 0.8;
 const FLIP_HOLD = 0.4;
 
+type TableSize = { width: number; height: number };
+
+// 테이블 기준 %를 가운데에서 떨어진 px로 바꿈. left/top 대신 transform으로 움직여야 매 프레임 레이아웃·다시 그리기가 없음
+function offsetX(percent: number, table: TableSize) {
+  return ((percent - 50) / 100) * table.width;
+}
+
+function offsetY(percent: number, table: TableSize) {
+  return ((percent - 50) / 100) * table.height;
+}
+
 // 배치 목록을 GSAP 값으로 바꿈(카드 순서대로 각자 다른 값)
-function toTweenVars(placements: CardPlacement[]) {
+function toTweenVars(placements: CardPlacement[], table: TableSize) {
   return {
-    left: (index: number) => `${placements[index].x}%`,
-    top: (index: number) => `${placements[index].y}%`,
+    x: (index: number) => offsetX(placements[index].x, table),
+    y: (index: number) => offsetY(placements[index].y, table),
     rotation: (index: number) => placements[index].rotation,
     scale: 1,
   };
@@ -43,6 +54,7 @@ function addWashAndGather(
   timeline: gsap.core.Timeline,
   slots: HTMLElement[],
   start: CardPlacement[],
+  table: TableSize,
 ) {
   const cards = start.map((placement) => {
     const dx = (placement.x - 50) * 2;
@@ -74,8 +86,8 @@ function addWashAndGather(
       timeline.to(
         slot,
         {
-          left: `${50 + (Math.cos(card.angle) * card.radius) / 2}%`,
-          top: `${50 + (Math.sin(card.angle) * card.radius) / 2}%`,
+          x: offsetX(50 + (Math.cos(card.angle) * card.radius) / 2, table),
+          y: offsetY(50 + (Math.sin(card.angle) * card.radius) / 2, table),
           rotation: card.rotation,
           duration: WASH_STEP - delay,
           ease: "sine.inOut",
@@ -91,8 +103,8 @@ function addWashAndGather(
     timeline.to(
       slot,
       {
-        left: "50%",
-        top: "50%",
+        x: 0,
+        y: 0,
         rotation: Math.round(cards[index].rotation / 360) * 360,
         duration: GATHER_DURATION - delay,
         ease: "power2.inOut",
@@ -130,6 +142,10 @@ export function useTableAnimation({
       const slots = gsap.utils.toArray<HTMLElement>(".card-table__slot", table);
 
       gsap.set(slots, { xPercent: -50, yPercent: -50 });
+      const tableSize = {
+        width: table.offsetWidth,
+        height: table.offsetHeight,
+      };
 
       const reduceMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
@@ -148,8 +164,14 @@ export function useTableAnimation({
         const slotRect = slot.getBoundingClientRect();
         gsap.set(slot, {
           transformOrigin: "50% 50%",
-          left: `${((slotRect.left + slotRect.width / 2 - tableRect.left) / tableRect.width) * 100}%`,
-          top: `${((slotRect.top + slotRect.height / 2 - tableRect.top) / tableRect.height) * 100}%`,
+          x:
+            slotRect.left +
+            slotRect.width / 2 -
+            (tableRect.left + tableRect.width / 2),
+          y:
+            slotRect.top +
+            slotRect.height / 2 -
+            (tableRect.top + tableRect.height / 2),
           zIndex: 1,
         });
 
@@ -159,8 +181,8 @@ export function useTableAnimation({
           (tableRect.height * 0.8) / 1.5,
         );
         const picked = {
-          left: "50%",
-          top: "50%",
+          x: 0,
+          y: 0,
           rotation: 0,
           scale: revealWidth / slot.offsetWidth,
         };
@@ -192,7 +214,7 @@ export function useTableAnimation({
       }
 
       if (phase === "fanned") {
-        const fan = toTweenVars(FAN_PLACEMENTS);
+        const fan = toTweenVars(FAN_PLACEMENTS, tableSize);
         const ready = () => onFanReady(measureFan(slots[0]));
         if (reduceMotion) {
           gsap.set(slots, fan);
@@ -200,6 +222,8 @@ export function useTableAnimation({
           return;
         }
 
+        // useGSAP이 첫 단계(워싱)를 되돌려 값이 지워지므로(배포 빌드에서만), 모은 상태를 다시 정함
+        gsap.set(slots, { ...fan, rotation: 0 });
         const angles = FAN_PLACEMENTS.map((placement) => placement.rotation);
         const setRotations = slots.map((slot) =>
           gsap.quickSetter(slot, "rotation", "deg"),
@@ -225,7 +249,7 @@ export function useTableAnimation({
         return;
       }
 
-      const scatter = toTweenVars(SCATTER_PLACEMENTS);
+      const scatter = toTweenVars(SCATTER_PLACEMENTS, tableSize);
       if (reduceMotion) {
         gsap.set(slots, scatter);
         gsap.delayedCall(0, onWashEnd);
@@ -236,13 +260,13 @@ export function useTableAnimation({
       // 시작 화면에서 오면 카드 더미 자리에서, 다시 뽑기면 테이블 가운데에서 흐리게 나타나며 흩어짐
       const deck = origin
         ? {
-            left: `${((origin.centerX - rect.left) / rect.width) * 100}%`,
-            top: `${((origin.centerY - rect.top) / rect.height) * 100}%`,
+            x: origin.centerX - (rect.left + rect.width / 2),
+            y: origin.centerY - (rect.top + rect.height / 2),
             rotation: 0,
             scale: origin.width / slots[0].offsetWidth,
             autoAlpha: 1,
           }
-        : { left: "50%", top: "50%", rotation: 0, scale: 1, autoAlpha: 0 };
+        : { x: 0, y: 0, rotation: 0, scale: 1, autoAlpha: 0 };
       const timeline = gsap
         .timeline({ onComplete: onWashEnd })
         .fromTo(slots, deck, {
@@ -252,7 +276,7 @@ export function useTableAnimation({
           ease: "power2.inOut",
           stagger: { each: SCATTER_STAGGER, from: "end" },
         });
-      addWashAndGather(timeline, slots, SCATTER_PLACEMENTS);
+      addWashAndGather(timeline, slots, SCATTER_PLACEMENTS, tableSize);
     },
     { scope: tableRef, dependencies: [phase, origin] },
   );
