@@ -7,7 +7,7 @@ const SOURCE = "images/cards";
 const OUTPUT = "public/images/cards";
 // 결과 화면에서 가장 크게 보일 때(420px)의 레티나 2배
 const WIDTH = 840;
-const QUALITY = 82;
+const QUALITY = 75;
 
 await mkdir(OUTPUT, { recursive: true });
 const files = (await readdir(SOURCE)).filter((file) => /\.png$/i.test(file));
