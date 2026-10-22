@@ -180,13 +180,28 @@ export function useTableAnimation({
           tableRect.width * 0.6,
           (tableRect.height * 0.8) / 1.5,
         );
+        // 작은 카드를 scale로 키우면 작게 그려 둔 그림이 늘어나 모자이크처럼 보이므로,
+        // 카드를 결과 크기로 만들어 줄여 둔 뒤 1배로 키움. 보이는 모서리·튀어나온 높이는 그대로 맞춤
+        const grow = revealWidth / slot.offsetWidth;
+        const radius = parseFloat(
+          getComputedStyle(card.firstElementChild ?? card).borderTopLeftRadius,
+        );
+        gsap.set(slot, {
+          width: revealWidth,
+          scale: 1 / grow,
+          "--card-radius": `${radius * grow}px`,
+        });
+        gsap.set(card, {
+          y: Number(gsap.getProperty(card, "y")) * grow,
+          transformPerspective: card.offsetWidth * 4,
+        });
         const picked = {
           x: 0,
           y: 0,
           rotation: 0,
-          scale: revealWidth / slot.offsetWidth,
+          scale: 1,
+          "--card-radius": `${radius}px`,
         };
-        gsap.set(card, { transformPerspective: card.offsetWidth * 4 });
 
         if (reduceMotion) {
           gsap.set(others, { autoAlpha: 0 });

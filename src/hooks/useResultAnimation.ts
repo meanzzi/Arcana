@@ -206,7 +206,7 @@ export function useResultAnimation({
     { scope: rootRef, dependencies: [dissolving] },
   );
 
-  // 마우스는 올리기만 해도, 손가락은 카드 위를 끄는 동안만 기울어짐(터치는 누른 동안에만 move가 옴)
+  // 마우스는 올리기만 해도, 손가락은 카드를 누르거나 끄는 동안 기울어짐
   const handleTiltMove = (event: React.PointerEvent<HTMLElement>) => {
     const tilt = tiltRef.current;
     if (!tilt) return;
@@ -222,6 +222,7 @@ export function useResultAnimation({
 
   return {
     tiltHandlers: {
+      onPointerDown: handleTiltMove,
       onPointerMove: handleTiltMove,
       onPointerLeave: resetTilt,
       onPointerCancel: resetTilt,

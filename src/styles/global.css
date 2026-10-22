@@ -4,9 +4,11 @@
   padding: 0;
 }
 
-/* 스크롤은 되지만 막대는 보이지 않게 */
+/* 스크롤은 되지만 막대는 보이지 않게. 아이폰 바운스로 화면이 끌려갈 때 뒤에 드러나는 색도 배경색으로 */
 html {
   scrollbar-width: none;
+  background-color: var(--color-bg-deep);
+  overscroll-behavior: none;
 }
 
 html::-webkit-scrollbar {
